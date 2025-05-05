@@ -8,7 +8,7 @@ export const ModoOscuro = () => {
     const theme = localStorage.getItem('theme');
     if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
-      document.documentElement.classList.add('bg-black'); // 🌟 AÑADIR bg-black
+      document.documentElement.classList.add('bg-black'); 
       setIsDarkMode(true);
     }
   }, []);
@@ -17,12 +17,12 @@ export const ModoOscuro = () => {
   const toggleModoOscuro = () => {
     if (document.documentElement.classList.contains('dark')) {
       document.documentElement.classList.remove('dark');
-      document.documentElement.classList.remove('bg-black'); // 🌟 QUITAR bg-black
+      document.documentElement.classList.remove('bg-black'); 
       localStorage.setItem('theme', 'light');
       setIsDarkMode(false);
     } else {
       document.documentElement.classList.add('dark');
-      document.documentElement.classList.add('bg-black'); // 🌟 AÑADIR bg-black
+      document.documentElement.classList.add('bg-black'); 
       localStorage.setItem('theme', 'dark');
       setIsDarkMode(true);
     }
@@ -31,7 +31,7 @@ export const ModoOscuro = () => {
   return (
     <button
       onClick={toggleModoOscuro}
-      className="fixed bottom-3  right-1 z-50 px-4 py-2 rounded-lg text-4xl   text-black dark:text-white shadow transition-all"
+      className="fixed bottom-3  right-1 z-50 px-0 py-2 text-4xl   text-black dark:text-white transition-all"
     >
       {isDarkMode ? '☀️' : '🌙'}
     </button>

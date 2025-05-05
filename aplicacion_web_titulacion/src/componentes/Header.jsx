@@ -2,58 +2,96 @@ import React from 'react';
 import logoFinal from '../assets/LogoPlaneta.png';
 import letras from '../assets/LetrasHorizontal.png';
 import { NavLink } from 'react-router-dom';
+import { useContext } from 'react';
+import { UserContext } from '../providers/UserProvider';
 
 export const Header = () => {
+  
+  const { user, loginConGoogle, cerrarSesion } = useContext(UserContext);
+
   return (
     // Fondo Externo
-    <div className="p-1 bg-gradient-to-r from-sky-400 via-lime-400 to-yellow-400 rounded-full m-2 mt-6  transition-all">
+    <div className="bg-gradient-to-r from-sky-400 via-lime-400 to-yellow-400 rounded-full  mt-3 ml-13 mr-13  transition-all">
 
       {/* Inicio del Header */}
-      <header className="flex items-center justify-between rounded-full p-2  transition-all">
+      <header className="flex items-center justify-between rounded-full p-2 transition-all">
 
         {/* Logo y título */}
         <div className="flex items-center">
-          <img src={logoFinal} alt="Deep SunLy Logo" className="w-10 h-auto ml-5 " />
-          
-          <img src={letras} alt="Deep SunLy Logo" className="w-40  mt-1   h-auto ml-4" />
-          <h1 className="ml-4 text-2xl font-bold text-black dark:text-white">
-            
-          </h1>
+          <img src={logoFinal} alt="Deep SunLy Logo" className="w-9  h-auto ml-5 " />
+          <img src={letras} alt="Deep SunLy Logo" className="w-30   mt-1   h-auto ml-4 mr-20 " />
         </div>
 
         {/* Navegación */}
-        <nav className="flex items-center space-x-8">
-          <NavLink to="/inicio" className="text-black dark:text-white text-lg font-bold hover:text-sky-400 transition-transform hover:scale-110">
+        <nav className="flex items-center space-x-2  transition-all">
+          <NavLink to="/inicio" className="nav-header ">
             Inicio
           </NavLink>
-          <NavLink to="/dashboard" className="text-black dark:text-white text-lg font-bold hover:text-sky-400 transition-transform hover:scale-110">
+          <NavLink to="/dashboard" className="nav-header">
             Dashboard
           </NavLink>
-          <NavLink to="/apirestinfo" className="text-black dark:text-white text-lg font-bold hover:text-sky-400 transition-transform hover:scale-110">
+          <NavLink to="/apirestinfo" className="nav-header">
             API Rest Info
           </NavLink>
-          <NavLink to="/camara" className="text-black dark:text-white text-lg font-bold hover:text-sky-400 transition-transform hover:scale-110">
+          <NavLink to="/camara" className="nav-header">
             Cámara
           </NavLink>
-          <NavLink to="/admin" className="text-black dark:text-white text-lg font-bold hover:text-sky-400 transition-transform hover:scale-110">
+          <NavLink to="/admin" className="nav-header">
             Admin
           </NavLink>
 
+
           {/* Botones de acción */}
-          <div className="ml-6 mr-2">
-            <button className="relative inline-flex items-center justify-center px-6 py-2 overflow-hidden font-semibold text-white rounded-full group transform transition-transform duration-300 hover:scale-110 cursor-pointer">
-              <span className="absolute inset-0 w-full h-full bg-black  rounded-full transition-transform duration-300"></span>
-              <span className="relative z-10">Iniciar Sesión</span>
-            </button>
-          </div>
+          {user ? <>
+            <div className='p-[2px] rounded-full bg-gradient-to-r from-sky-400 via-lime-400 to-sky-400 ml-20    '>
 
-          <div className="ml-2 mr-4">
-            <button className="relative inline-flex items-center justify-center px-6 py-2 overflow-hidden font-semibold text-white rounded-full group transform transition-transform duration-300 hover:scale-110 cursor-pointer">
-              <span className="absolute inset-0 w-full h-full bg-black rounded-full transition-transform duration-300"></span>
-              <span className="relative z-10">Registrarse</span>
-            </button>
-          </div>
+              <div className='bg-black rounded-full flex items-center  p-2 text-white'>
 
+                <span className=' text-center ml-1 mr-2 font-semibold  '>
+                  {user.displayName}
+                </span>
+
+
+                <img
+                  src={user.photoURL}
+                  alt="Foto de perfil"
+                  className="w-8 h-8   rounded-full  mr-1  "
+                />
+
+              </div>
+
+            </div>
+
+            <button
+              onClick={cerrarSesion}
+              className="  px-4 py-3 mr-1  cursor-pointer rounded-full bg-red-500 font-semibold  text-white hover:bg-red-600 transition"
+            >
+              LogOut 
+            </button>
+          </>
+            :
+            <>
+
+            <div className='p-[2px] rounded-full bg-gradient-to-r from-sky-400 via-lime-400 to-cyan-300  '>
+              <div className="">
+                <button onClick={loginConGoogle} className="relative text-base  inline-flex items-center justify-center px-6 py-2 overflow-hidden font-semibold text-white rounded-full group transform transition-transform duration-300 hover:scale-110 cursor-pointer">
+                  <span className="absolute inset-0 w-full h-full bg-black    rounded-full transition-transform duration-300"></span>
+                  <span className="relative z-10">Iniciar Sesión</span>
+                </button>
+              </div>
+            </div>
+
+            <div className='p-[2px] rounded-full bg-gradient-to-r from-sky-400 via-lime-400 to-cyan-300  '> 
+              <div className="">
+                <button onClick={loginConGoogle} className="relative text-base inline-flex items-center justify-center px-6 py-2 overflow-hidden font-semibold text-white rounded-full group transform transition-transform duration-300 hover:scale-110 cursor-pointer">
+                  <span className="absolute inset-0 w-full h-full bg-black   rounded-full transition-transform duration-300"></span>
+                  <span className="relative z-10">Registrarse</span>
+                </button>
+              </div>
+            </div>
+
+            </>
+          }
         </nav>
         {/* Fin de la navegación */}
 

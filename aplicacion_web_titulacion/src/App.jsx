@@ -1,9 +1,12 @@
 import './index.css'
+import { UserProvider } from './providers/UserProvider'
 import { RouterPrincipal } from './routers/RouterPrincipal'
 
 function App() {
   return (
-    <RouterPrincipal />   
+    <UserProvider>
+      <RouterPrincipal />
+    </UserProvider>
   )
 }
 
