@@ -67,20 +67,22 @@ export const Footer = () => {
                         <h2 className='text-black dark:text-white  font-bold text-lg font-sans transition-colors duration-500 ease-in-out pb-4  text-center '> Redes Sociales</h2>
                         <div className='flex flex-col gap-9 '>
 
-                            <p className='flex flex-row '>
+                            <div className='flex flex-row items-center gap-2'>
                                 <img src={Facebook} alt="Facebook" className="w-10 h-10" />
-                                <h3 className='redes-efectos '>@DeepSunLy_fb</h3>
-                            </p>
+                                <h3 className='redes-efectos'>@DeepSunLy_fb</h3>
+                            </div>
 
-                            <p className='flex flex-row '>
+                            <div className='flex flex-row items-center gap-2'>
                                 <img src={Instagram} alt="Instagram" className="w-10 h-10" />
-                                <h3 className='redes-efectos '> @DeepSunLy_ig </h3>
-                            </p>
+                                <h3 className='redes-efectos'>@DeepSunLy_ig</h3>
+                            </div>
 
-                            <p className='flex flex-row '>
+                            <div className='flex flex-row items-center gap-2'>
                                 <img src={Whatsapp} alt="Whatsapp" className="w-10 h-10" />
-                                <h3 className='redes-efectos '>  09 9462 2454 </h3>
-                            </p>
+                                <h3 className='redes-efectos'>09 9462 2454</h3>
+                            </div>
+
+
                         </div>
                     </div>
                 </footer>

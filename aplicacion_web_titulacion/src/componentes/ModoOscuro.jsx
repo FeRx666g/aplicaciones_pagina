@@ -31,7 +31,7 @@ export const ModoOscuro = () => {
   return (
     <button
       onClick={toggleModoOscuro}
-      className="fixed bottom-3  right-1 z-50 px-0 py-2 text-4xl   text-black dark:text-white transition-all"
+      className="fixed bottom-3  right-1 z-50 px-0 py-2 text-4xl cursor-pointer  text-black dark:text-white transition-all"
     >
       {isDarkMode ? '☀️' : '🌙'}
     </button>

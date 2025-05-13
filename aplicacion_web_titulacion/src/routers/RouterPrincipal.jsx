@@ -8,6 +8,8 @@ import { Admin } from '../paginas/Admin';
 import { Header } from '../componentes/Header';
 import { ModoOscuro } from '../componentes/ModoOscuro';
 import { Footer } from '../componentes/Footer';
+import { APIKeysPage } from '../paginas/APIKeyspage';
+
 
 export const RouterPrincipal = () => {
   return (
@@ -31,6 +33,7 @@ export const RouterPrincipal = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/apirestinfo" element={<APIRestinfo />} />
             <Route path="/camara" element={<Camara />} />
+            <Route path="/mis-apikeys" element={<APIKeysPage />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/*" element={<h1>Error 404, la página no existe</h1>} />
           </Routes>

@@ -2,13 +2,14 @@ import React, { useContext, useState, useEffect } from 'react'
 import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import UserContext from '../providers/UserProvider'
+import { AccesoRestringido } from '../componentes/AccesoRestringido'
 
 export const Admin = () => {
 
   const { user } = useContext(UserContext);
   const [usuarios, setUsuarios] = useState([]);
 
-  const esAdmin = user?.email === 'fer1567g@gmail.com';
+  const esAdmin = user?.rol === 3;
 
   /* Función para obtener la lista colección completa */
   const consultarUsuarios = async () => {
@@ -41,7 +42,7 @@ export const Admin = () => {
     try {
       await deleteDoc(doc(db, "usuarios", uid));
       alert("Usuario eliminado de Firestore");
-      consultarUsuarios(); // recargar lista
+      consultarUsuarios(); 
     } catch (error) {
       alert("Error al eliminar usuario: " + error.message);
     }
@@ -54,7 +55,7 @@ export const Admin = () => {
   }, [esAdmin]);
 
   if (!esAdmin) {
-    return <p className="text-red-600 text-center mt-10 font-bold">No tienes permiso para acceder a esta página.</p>;
+    return <AccesoRestringido/>;
   }
 
   return (
