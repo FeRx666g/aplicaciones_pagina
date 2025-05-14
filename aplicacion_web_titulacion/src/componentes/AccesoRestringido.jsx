@@ -3,7 +3,7 @@ import { UserContext } from '../providers/UserProvider';
 
 export const AccesoRestringido = ({
     mensaje = "Acceso restringido",
-    descripcion = "Por favor inicia sesión para acceder a esta página."
+    descripcion = "Por favor inicia sesión o solicita permiso para acceder a esta página."
 }) => {
     const { loginConGoogle } = useContext(UserContext);
 
