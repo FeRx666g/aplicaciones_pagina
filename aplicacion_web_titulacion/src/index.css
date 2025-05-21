@@ -40,3 +40,7 @@ nav{
   @apply text-black m-2 ml-3 font-bold dark:text-white hover:text-cyan-400 transition-colors duration-500 ease-in-out cursor-pointer
   ;
 }
+
+.input-form {
+  @apply w-full p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white transition;
+}
