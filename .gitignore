@@ -1,0 +1,11 @@
+backend/credenciales/*.json
+
+firebase-service-account.json
+
+ml-backend/modelo/*.pkl
+
+ml-backend/modelo/*.h5
+
+backend-verificador/node_modules/
+
+backend/node_modules
