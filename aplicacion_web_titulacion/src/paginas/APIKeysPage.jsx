@@ -5,85 +5,213 @@ import { db } from '../firebase';
 import { nanoid } from 'nanoid';
 import { AccesoRestringido } from '../componentes/AccesoRestringido';
 import SHA256 from 'crypto-js/sha256';
+import Swal from 'sweetalert2';
+
+/**
+ * APIKeysPage
+ *
+ * Componente que permite a los usuarios autenticados gestionar sus API Keys.
+ *
+ * Muestra:
+ * - Un selector para elegir fecha y hora de expiración de una nueva API Key.
+ * - Un botón para generar una nueva API Key (mostrando la clave completa solo una vez).
+ * - Una lista de API Keys ya generadas con su fecha de expiración y la opción de eliminarlas.
+ *
+ * Funcionalidades:
+ * - Obtiene las API Keys del usuario desde Firestore (`api_keys`).
+ * - Genera una API Key aleatoria (32 caracteres), guarda su hash (SHA256) en Firestore con la expiración.
+ * - Elimina una API Key seleccionada.
+ * - Permite copiar la clave recién generada al portapapeles desde el modal.
+ *
+ * Usa:
+ * - Contexto `UserContext` para obtener el usuario actual.
+ * - Firestore (getDocs, setDoc, deleteDoc, query, Timestamp) para persistencia.
+ * - `nanoid` para generar claves únicas.
+ * - `crypto-js/SHA256` para almacenar solo el hash de la clave.
+ * - `SweetAlert2` para notificaciones y confirmaciones.
+ *
+ * Estilizado con TailwindCSS.
+ */
+
 
 export const APIKeysPage = () => {
+    // Obtiene el usuario actual del contexto
     const { user } = useContext(UserContext);
+
+    // Estado para guardar las API Keys del usuario
     const [apiKeys, setApiKeys] = useState([]);
+
+    // Estado para indicar si aún está cargando
     const [loading, setLoading] = useState(true);
+
+    // Fecha actual en formato YYYY-MM-DD para inicializar
     const hoy = new Date().toISOString().split('T')[0];
-    const ahora = new Date().toTimeString().slice(0, 5); // HH:MM
+
+    // Hora actual en formato HH:MM para inicializar
+    const ahora = new Date().toTimeString().slice(0, 5);
+
+    // Estado para la fecha de expiración de la nueva API Key
     const [fechaExpiracion, setFechaExpiracion] = useState(hoy);
+
+    // Estado para la hora de expiración de la nueva API Key
     const [horaExpiracion, setHoraExpiracion] = useState(ahora);
 
-    // Obtiene todas las API Keys del usuario
-    const fetchApiKeys = async () => {
-        if (!user) return;
 
+    // Función para obtener todas las API Keys del usuario
+    const fetchApiKeys = async () => {
+        if (!user) return; // si no hay usuario, no hace nada
+
+        // Crea la consulta para las keys del usuario actual
         const q = query(collection(db, 'api_keys'), where('uid', '==', user.uid));
+
+        // Ejecuta la consulta
         const snapshot = await getDocs(q);
+
+        // Mapea los documentos a un array
         const keysList = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
+
+        // Guarda las keys en el estado
         setApiKeys(keysList);
+
+        // Indica que ya terminó de cargar
         setLoading(false);
     };
 
+    // Ejecuta la carga inicial de las API Keys cuando hay usuario
     useEffect(() => {
         if (user) {
             fetchApiKeys();
         }
     }, [user]);
 
-    // Genera una API Key con expiración personalizada y la guarda en la subcolección "keys"
+
+    // Función para generar una nueva API Key con expiración personalizada
     const generarAPIKey = async () => {
+        // Verifica que las fechas estén definidas
         if (!fechaExpiracion || !horaExpiracion) {
-            alert('Por favor selecciona una fecha y hora de expiración válidas.');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Fecha y hora requeridas',
+                text: 'Por favor selecciona una fecha y hora de expiración válidas.'
+            });
             return;
         }
 
+        // Construye el objeto Date a partir de las entradas
         const expiracion = new Date(`${fechaExpiracion}T${horaExpiracion}:00`);
+
+        // Verifica que sea válida
         if (isNaN(expiracion)) {
-            alert('Fecha u hora inválida. Intenta nuevamente.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Fecha u hora inválida',
+                text: 'Por favor verifica los valores e intenta nuevamente.'
+            });
             return;
         }
 
-        const nuevaKey = nanoid(32); // API Key real
-        const hashKey = SHA256(nuevaKey).toString(); // Se guarda solo el hash
+        // Genera la clave real y su hash
+        const nuevaKey = nanoid(32); // clave visible para el usuario
+        const hashKey = SHA256(nuevaKey).toString(); // solo se guarda el hash en la BD
+
         const ahora = new Date();
 
+        // Referencia al documento en Firestore
         const docRef = doc(db, 'api_keys', hashKey);
+
+        // Verifica que no exista ya esa key
         const existe = await getDoc(docRef);
         if (existe.exists()) {
-            alert('Ya existe una API Key igual. Intenta nuevamente.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Ya existe una API Key igual. Intenta nuevamente.'
+            });
             return;
         }
 
+        // Guarda la key en Firestore con el hash, fecha de creación y expiración
         await setDoc(docRef, {
             uid: user.uid,
             createdAt: Timestamp.fromDate(ahora),
             expiresAt: Timestamp.fromDate(expiracion)
         });
 
-        alert(`Tu nueva API Key (guárdala bien, no podrás verla después):\n\n${nuevaKey}`);
+        // Muestra la clave real y permite copiarla antes de cerrarse
+        Swal.fire({
+            icon: 'success',
+            title: 'API Key generada',
+            html: `
+        <div>
+            <strong id="apikey">${nuevaKey}</strong>
+            <br><br>
+            <button id="copiar" class="swal2-confirm swal2-styled" style="background-color:#3085d6;">
+                Copiar
+            </button>
+            <br><br>
+            <small>(Guárdala bien, no podrás verla después)</small>
+        </div>
+    `,
+            confirmButtonText: 'Entendido',
+            didOpen: () => {
+                // Maneja el botón de copiar
+                const botonCopiar = Swal.getPopup().querySelector('#copiar');
+                const texto = Swal.getPopup().querySelector('#apikey').textContent;
+                botonCopiar.addEventListener('click', () => {
+                    navigator.clipboard.writeText(texto);
+                    botonCopiar.textContent = 'Copiado ✔️';
+                    setTimeout(() => {
+                        botonCopiar.textContent = 'Copiar';
+                    }, 1500);
+                });
+            }
+        });
 
-        fetchApiKeys(); // Puedes modificar esto si ya no usas subcolecciones
-    };
-
-
-
-    // Elimina una API Key por id dentro de api_keys/{uid}/keys
-    const eliminarAPIKey = async (hashKey) => {
-        const refDoc = doc(db, 'api_keys', hashKey);
-        await deleteDoc(refDoc);
+        // Actualiza las keys en la vista
         fetchApiKeys();
     };
 
+    // Elimina una API Key por id dentro de api_keys/{uid}/keys
+    const eliminarAPIKey = async (hashKey) => {
+        // Muestra un cuadro de confirmación antes de eliminar
+        const confirmacion = await Swal.fire({
+            title: '¿Eliminar API Key?',
+            text: 'Esta acción no se puede deshacer.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        });
 
+        // Si el usuario cancela, no hace nada
+        if (!confirmacion.isConfirmed) return;
+
+        // Elimina el documento con el hashKey en la colección api_keys
+        await deleteDoc(doc(db, 'api_keys', hashKey));
+
+        // Muestra notificación de éxito
+        Swal.fire({
+            icon: 'success',
+            title: 'API Key eliminada',
+            timer: 1500,
+            showConfirmButton: false
+        });
+
+        // Recarga la lista de API Keys
+        fetchApiKeys();
+    };
+
+    // Si no hay usuario (no autenticado), renderiza componente de acceso restringido
     if (!user) {
         return <AccesoRestringido />;
     }
 
+    // Mientras se cargan las API Keys, muestra mensaje de carga
     if (loading) {
         return <p className="text-center mt-10">Cargando API Keys...</p>;
     }

@@ -6,21 +6,66 @@ import { AccesoRestringido } from '../componentes/AccesoRestringido'
 import Papa from 'papaparse';
 import Swal from 'sweetalert2';
 
+/**
+ * Admin
+ *
+ * Componente de administración para usuarios y datos meteorológicos.
+ *
+ * Permite al administrador:
+ * - Ver y editar la lista de usuarios registrados (nombre y rol).
+ * - Eliminar usuarios existentes.
+ * - Subir datos meteorológicos desde un archivo CSV a Firestore.
+ * - Consultar datos meteorológicos guardados por rango de fechas.
+ * - Eliminar datos meteorológicos seleccionados.
+ *
+ * Características:
+ * - Solo accesible para usuarios con rol `3` (administrador); los demás ven la pantalla `AccesoRestringido`.
+ * - Usa Firestore para leer, actualizar, eliminar y subir registros en lote.
+ * - Usa PapaParse para procesar archivos CSV.
+ * - Usa SweetAlert2 para mostrar notificaciones y confirmaciones.
+ * - Incluye paginado visual, selección múltiple, y validación de fechas.
+ *
+ * Usa:
+ * - Contexto `UserContext` para verificar el rol del usuario.
+ * - Firebase Firestore para persistencia de usuarios y datos.
+ * - TailwindCSS para los estilos y diseño responsivo.
+ */
+
 export const Admin = () => {
 
+  // Obtener el usuario autenticado desde el contexto
   const { user } = useContext(UserContext);
+
+  // Lista de usuarios registrados
   const [usuarios, setUsuarios] = useState([]);
+
+  // Datos meteorológicos cargados desde CSV
   const [datosCargados, setDatosCargados] = useState([]);
+
+  // Rangos de fecha para consulta
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
+
+  // Datos meteorológicos consultados en Firestore
   const [datosConsultados, setDatosConsultados] = useState([]);
+
+  // IDs de los registros seleccionados para eliminar
   const [seleccionados, setSeleccionados] = useState([]);
+
+  // Bandera para indicar si todos los datos están seleccionados
   const [todosSeleccionados, setTodosSeleccionados] = useState(false);
 
-
+  // Verifica si el usuario autenticado tiene rol de administrador
   const esAdmin = user?.rol === 3;
 
-  // Función para seleccionar o deseleccionar todos los datos consultados
+  /**
+   * consultarDatosPorFecha
+   * 
+   * Consulta en Firestore los datos meteorológicos dentro de un rango de fechas.
+   * Valida que ambas fechas estén presentes y que la fecha inicial sea menor o igual a la final.
+   * Si encuentra resultados, los guarda en `datosConsultados` y limpia las selecciones previas.
+   * Si no encuentra datos o hay errores, muestra alertas con SweetAlert2.
+   */
   const consultarDatosPorFecha = async () => {
     if (!fechaInicio || !fechaFin) {
       Swal.fire('Alerta', 'Por favor selecciona ambas fechas.', 'warning');
@@ -31,7 +76,6 @@ export const Admin = () => {
     const hasta = new Date(fechaFin);
 
     if (desde > hasta) {
-      
       Swal.fire('Alerta', 'La fecha de inicio no puede ser mayor que la fecha de fin.', 'warning');
       return;
     }
@@ -58,20 +102,25 @@ export const Admin = () => {
       setDatosConsultados(resultados);
       setSeleccionados([]);
       setTodosSeleccionados(false);
-    } catch (error) {
-      console.error("❌ Error consultando:", error);
-      alert("Error al consultar datos.");
+    }
+    catch (error) {
+      console.error("Error consultando:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al consultar datos',
+        text: 'Hubo un problema al consultar datos en Firestore.',
+      });
     }
   };
 
-
-  //  Función para eliminar un dato específico
   const eliminarSeleccionados = async () => {
+    // Verifica que haya al menos un dato seleccionado
     if (seleccionados.length === 0) {
-      Swal.fire('⚠️ Atención', 'No has seleccionado ningún dato.', 'warning');
+      Swal.fire('Atención', 'No has seleccionado ningún dato.', 'warning');
       return;
     }
 
+    // Muestra cuadro de confirmación antes de eliminar
     const confirmacion = await Swal.fire({
       title: `¿Eliminar ${seleccionados.length} registros?`,
       text: 'Esta acción no se puede deshacer.',
@@ -86,89 +135,152 @@ export const Admin = () => {
     if (!confirmacion.isConfirmed) return;
 
     try {
+      // Crea un batch para eliminar múltiples documentos de Firestore
       const batch = writeBatch(db);
+
+      // Agrega cada documento seleccionado al batch
       seleccionados.forEach(id => batch.delete(doc(db, 'datos_prediccion', id)));
+
+      // Ejecuta el batch (confirma la eliminación)
       await batch.commit();
 
-      Swal.fire('✅ Eliminado', 'Los registros seleccionados fueron eliminados.', 'success');
+      Swal.fire('Eliminado', 'Los registros seleccionados fueron eliminados.', 'success');
+
+      // Recarga los datos para actualizar la tabla
       consultarDatosPorFecha();
+
     } catch (error) {
-      console.error('❌ Error al eliminar:', error);
+      console.error('Error al eliminar:', error);
       Swal.fire('Error', 'No se pudieron eliminar los datos.', 'error');
     }
   };
 
-  /* Función para obtener la lista colección completa */
+
   const consultarUsuarios = async () => {
+    // Obtiene todos los documentos de la colección 'usuarios'
     const coleccionUsuarios = await getDocs(collection(db, "usuarios"));
+
+    // Mapea los datos y actualiza el estado local
     const listaUsuarios = coleccionUsuarios.docs.map(doc => doc.data());
     setUsuarios(listaUsuarios);
   };
 
-  /* Función para editar y guardar los cambios de un usuario */
+
   const guardarCambios = async (usuarioActualizado) => {
     try {
+      // Referencia al documento del usuario que se va a actualizar
       const referenciaUsuario = doc(db, "usuarios", usuarioActualizado.uid);
+
+      // Actualiza los campos displayName y rol del usuario
       await updateDoc(referenciaUsuario, {
         displayName: usuarioActualizado.displayName,
         rol: usuarioActualizado.rol
       });
-      alert("Usuario actualizado.");
-    }
-    catch (error) {
-      alert("Error al actualizar usuario: " + error.message);
-    }
 
+      Swal.fire({
+        icon: 'success',
+        title: 'Usuario actualizado',
+        showConfirmButton: false,
+        timer: 1500
+      });
+
+    } catch (error) {
+      // Muestra mensaje de error en caso de fallo
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al actualizar',
+        text: error.message
+      });
+    }
   };
-
-  /* Función para eliminar un usuario */
   const eliminarUsuario = async (uid) => {
-    const confirmar = confirm("¿Eliminar usuario de Firestore?");
-    if (!confirmar) return;
+    // Muestra cuadro de confirmación antes de eliminar
+    const confirmacion = await Swal.fire({
+      title: '¿Eliminar usuario?',
+      text: 'Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirmacion.isConfirmed) return;
 
     try {
+      // Elimina el documento del usuario en Firestore
       await deleteDoc(doc(db, "usuarios", uid));
-      alert("Usuario eliminado de Firestore");
+
+      // Muestra mensaje de éxito
+      Swal.fire({
+        icon: 'success',
+        title: 'Usuario eliminado',
+        showConfirmButton: false,
+        timer: 1500
+      });
+
+      // Recarga la lista de usuarios para reflejar cambios
       consultarUsuarios();
+
     } catch (error) {
-      alert("Error al eliminar usuario: " + error.message);
+      // Muestra mensaje de error si falla la eliminación
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al eliminar',
+        text: error.message
+      });
     }
   };
 
+
   useEffect(() => {
+    // Si el usuario es admin, consulta la lista de usuarios al montar o cambiar `esAdmin`
     if (esAdmin) {
       consultarUsuarios();
     }
   }, [esAdmin]);
 
   if (!esAdmin) {
+    // Si no es admin, muestra el componente de acceso restringido
     return <AccesoRestringido />;
   }
 
   return (
     <div className=' '>
-
+      {/* Encabezado principal de la sección de usuarios */}
       <div className='div-externo '>
-        <h1 className='text-2xl font-bold  p-1  text-center block bg-white  dark:bg-black rounded-full dark:text-white transition-all  '> Usuarios Registrados</h1>
+        <h1 className='text-2xl font-bold p-1 text-center block bg-white dark:bg-black rounded-full dark:text-white transition-all'>
+          Usuarios Registrados
+        </h1>
       </div>
-      <div className=''>
 
-        <ul className='space-y-3 m-3 '>
+      <div className=''>
+        <ul className='space-y-3 m-3'>
           {usuarios.map((usuario, index) => (
-            <li key={usuario.uid} className="flex justify-between items-center bg-white  dark:bg-zinc-800 dark:text-gray-00  p-3 rounded shadow transition-all">
-              <div className="flex items-center gap-4 ">
+            <li
+              key={usuario.uid}
+              className="flex justify-between items-center bg-white dark:bg-zinc-800 dark:text-gray-00 p-3 rounded shadow transition-all"
+            >
+              {/* Sección izquierda: foto, nombre, email y rol */}
+              <div className="flex items-center gap-4">
+                {/* Foto de perfil */}
                 <img src={usuario.photoURL} alt="Avatar" className="w-12 h-12 rounded-full" />
-                <div className=''>
+                <div>
+                  {/* Campo editable para el nombre del usuario */}
                   <input
                     className="text-lg font-bold bg-transparent border-b border-gray-300"
                     value={usuario.displayName || ""}
                     onChange={(e) => {
                       const nuevos = [...usuarios];
                       nuevos[index].displayName = e.target.value;
-                      setUsuarios(nuevos);
+                      setUsuarios(nuevos); // Actualiza el estado local
                     }}
                   />
+                  {/* Correo electrónico */}
                   <p className="text-sm text-gray-600">{usuario.email}</p>
+
+                  {/* Campo editable para el rol */}
                   <div className="mt-1">
                     Rol:
                     <input
@@ -178,20 +290,24 @@ export const Admin = () => {
                       onChange={(e) => {
                         const nuevos = [...usuarios];
                         nuevos[index].rol = parseInt(e.target.value);
-                        setUsuarios(nuevos);
+                        setUsuarios(nuevos); // Actualiza el estado local
                       }}
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Sección derecha: botones de acción */}
               <div className="flex gap-2">
+                {/* Botón para guardar cambios */}
                 <button
                   onClick={() => guardarCambios(usuario)}
                   className="bg-blue-500 text-white px-3 py-1 cursor-pointer rounded"
                 >
                   Guardar
                 </button>
+
+                {/* Botón para eliminar usuario */}
                 <button
                   onClick={() => eliminarUsuario(usuario.uid)}
                   className="bg-red-500 text-white px-3 py-1 cursor-pointer rounded"
@@ -204,10 +320,15 @@ export const Admin = () => {
         </ul>
       </div>
 
-      {/* Sección para subir CSV a Firestore */}
+      {/* Sección para subir datos meteorológicos desde un archivo CSV a Firestore */}
       <div className='p-4 mt-10 bg-white dark:bg-zinc-800 rounded shadow'>
-        <h2 className='text-xl font-semibold mb-3 text-center'>Subir datos meteorológicos (CSV)</h2>
 
+        {/* Título de la sección */}
+        <h2 className='text-xl font-semibold mb-3 text-center'>
+          Subir datos meteorológicos (CSV)
+        </h2>
+
+        {/* Input oculto para seleccionar archivo CSV */}
         <input
           type="file"
           accept=".csv"
@@ -217,10 +338,12 @@ export const Admin = () => {
             const archivo = e.target.files[0];
             if (!archivo) return;
 
+            // Parsear archivo CSV
             Papa.parse(archivo, {
               header: true,
               skipEmptyLines: true,
               complete: (result) => {
+                // Convertir cada fila a un objeto con los datos correctos
                 const datos = result.data.map(fila => {
                   const { anio, mes, dia, hora, minuto } = fila;
                   const fecha = new Date(anio, mes - 1, dia, hora, minuto);
@@ -244,18 +367,24 @@ export const Admin = () => {
                 setDatosCargados(datos);
               },
               error: (err) => {
-                console.error("❌ Error al leer el archivo CSV:", err);
-                alert("No se pudo procesar el archivo CSV.");
+                console.error("Error al leer el archivo CSV:", err);
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error al leer CSV',
+                  text: 'No se pudo procesar el archivo CSV.',
+                });
               }
             });
           }}
         />
 
+        {/* Botón para abrir selector de archivo */}
         <div className="flex flex-col items-center gap-4 mt-4">
           <label htmlFor="input-csv" className="bg-indigo-600 text-white px-6 py-2 rounded-lg cursor-pointer shadow hover:bg-indigo-700 transition">
             Seleccionar archivo CSV
           </label>
 
+          {/* Tabla con datos cargados */}
           {datosCargados.length > 0 && (
             <>
               <div className="max-h-[400px] overflow-y-auto w-full border rounded-lg shadow bg-white dark:bg-zinc-700">
@@ -272,6 +401,7 @@ export const Admin = () => {
                     </tr>
                   </thead>
                   <tbody>
+                    {/* Filas de la tabla con los datos parseados */}
                     {datosCargados.map((fila, idx) => (
                       <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-zinc-600">
                         <td>{fila.dia}/{fila.mes}/{fila.anio} {fila.hora}:{fila.minuto}</td>
@@ -286,6 +416,8 @@ export const Admin = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Botones para subir datos a Firestore o limpiar tabla */}
               <div className="flex gap-4 mt-4">
                 <button
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg shadow transition"
@@ -296,12 +428,13 @@ export const Admin = () => {
                       let operacionesEnBatch = 0;
                       let subidos = 0;
 
+                      // Procesar los datos cargados y subirlos en batches de 500
                       for (let i = 0; i < datosCargados.length; i++) {
                         const dato = datosCargados[i];
                         const docId = `${dato.anio}-${dato.mes}-${dato.dia}-${dato.hora}-${dato.minuto}`;
                         const ref = doc(col, docId);
 
-                        batch.set(ref, dato); // Reemplaza si ya existe
+                        batch.set(ref, dato); // inserta o reemplaza
                         operacionesEnBatch++;
                         subidos++;
 
@@ -328,7 +461,7 @@ export const Admin = () => {
 
                       setDatosCargados([]);
                     } catch (error) {
-                      console.error("❌ Error al subir a Firestore:", error);
+                      console.error("Error al subir a Firestore:", error);
                       Swal.fire('Error', 'No se pudieron subir los datos.', 'error');
                     }
                   }}
@@ -336,7 +469,7 @@ export const Admin = () => {
                   Subir a Firestore
                 </button>
 
-
+                {/* Botón para limpiar los datos de la tabla */}
                 <button
                   className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg shadow transition"
                   onClick={() => {
@@ -346,17 +479,24 @@ export const Admin = () => {
                   Limpiar tabla
                 </button>
               </div>
-
             </>
           )}
         </div>
       </div>
 
-      <div className="my-6 p-4 bg-white dark:bg-zinc-800 rounded shadow">
-        <h2 className="text-xl font-semibold mb-4 text-center">Consulta de Datos Metereológicos Disponibles</h2>
 
+      {/* Sección para consultar datos meteorológicos ya almacenados en Firestore */}
+      <div className="my-6 p-4 bg-white dark:bg-zinc-800 rounded shadow">
+
+        {/* Título de la sección */}
+        <h2 className="text-xl font-semibold mb-4 text-center">
+          Consulta de Datos Metereológicos Disponibles
+        </h2>
+
+        {/* Inputs y botón para seleccionar rango de fechas */}
         <div className="flex flex-col items-center gap-4 mb-4">
-          {/* Fila de los inputs */}
+
+          {/* Inputs de rango de fechas */}
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <label className="text-sm">
               Desde:
@@ -364,30 +504,31 @@ export const Admin = () => {
                 type="datetime-local"
                 className="ml-2 border px-2 py-1 rounded"
                 value={fechaInicio}
-                onChange={e => setFechaInicio(e.target.value)}
+                onChange={e => setFechaInicio(e.target.value)} // actualizar fecha inicio
               />
             </label>
+
             <label className="text-sm">
               Hasta:
               <input
                 type="datetime-local"
                 className="ml-2 border px-2 py-1 rounded"
                 value={fechaFin}
-                onChange={e => setFechaFin(e.target.value)}
+                onChange={e => setFechaFin(e.target.value)} // actualizar fecha fin
               />
             </label>
           </div>
 
-          {/* Fila del botón */}
+          {/* Botón para lanzar consulta */}
           <button
-            onClick={consultarDatosPorFecha}
+            onClick={consultarDatosPorFecha} // ejecuta la consulta
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow"
           >
             Consultar
           </button>
         </div>
 
-
+        {/* Si hay resultados, mostrar tabla */}
         {datosConsultados.length > 0 && (
           <>
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto border rounded">
@@ -395,6 +536,7 @@ export const Admin = () => {
                 <thead className="bg-gray-100 sticky top-0 z-10">
                   <tr>
                     <th>
+                      {/* Checkbox para seleccionar/deseleccionar todos */}
                       <input
                         type="checkbox"
                         checked={todosSeleccionados}
@@ -414,10 +556,13 @@ export const Admin = () => {
                     <th>Potencia</th>
                   </tr>
                 </thead>
+
                 <tbody>
+                  {/* Filas de los datos consultados */}
                   {datosConsultados.map((fila, idx) => (
                     <tr key={fila.id} className="hover:bg-gray-50">
                       <td>
+                        {/* Checkbox individual de cada fila */}
                         <input
                           type="checkbox"
                           checked={seleccionados.includes(fila.id)}
@@ -434,6 +579,8 @@ export const Admin = () => {
                           }}
                         />
                       </td>
+
+                      {/* Datos meteorológicos en columnas */}
                       <td>{fila.dia}/{fila.mes ?? '??'}/{fila.anio ?? '??'} {fila.hora}:{fila.minuto}</td>
                       <td>{fila.lux}</td>
                       <td>{fila.temperatura}</td>
@@ -447,6 +594,7 @@ export const Admin = () => {
               </table>
             </div>
 
+            {/* Botón para eliminar los registros seleccionados */}
             <button
               onClick={eliminarSeleccionados}
               className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow"
@@ -456,6 +604,7 @@ export const Admin = () => {
           </>
         )}
       </div>
+
     </div>
   )
 }

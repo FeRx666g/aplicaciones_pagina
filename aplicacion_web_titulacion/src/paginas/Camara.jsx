@@ -3,52 +3,107 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
+/**
+ * Camara
+ *
+ * Componente que permite controlar en tiempo real una ESP32-CAM y un panel solar con dos servos.
+ *
+ * Funcionalidades principales:
+ * - Iniciar y detener el stream de la cámara (iframe desde ESP32-CAM vía ngrok).
+ * - Controlar manualmente los servomotores de la cámara y del panel solar.
+ * - Cambiar la resolución (paso) de movimiento horizontal y vertical para cada uno.
+ * - Enviar comandos a Firestore para que los microcontroladores los reciban.
+ * - Soporta control por teclado y por botones gráficos.
+ *
+ * Usa:
+ * - `useState` y `useEffect` para manejar estado y eventos.
+ * - Firestore (`setDoc`) para enviar comandos al documento `control/servos`.
+ * - `iframe` para mostrar el stream de la ESP32-CAM.
+ * - Componente interno `ControlBox` para encapsular los controles de cámara y panel.
+ * - Iconos de `lucide-react` para las flechas.
+ *
+ * Notas:
+ * - Se conecta a la cámara y al panel solar, cada uno con controles independientes.
+ * - La cámara se activa al presionar un botón y se detiene con otro.
+ * - Los controles envían comandos en formato `Txxxxyyyy` o `F` para automático.
+ *
+ * Estilizado con TailwindCSS.
+ */
+
 export const Camara = () => {
+  // Estado que indica si el stream de la cámara está activo o no
   const [streamActivo, setStreamActivo] = useState(false);
+
+  // Estado para la posición actual del servo de la cámara (h = horizontal, v = vertical)
   const [servoCam, setServoCam] = useState({ h: 90, v: 45 });
+
+  // Estado para la posición actual del servo del panel solar (h = horizontal, v = vertical)
   const [servoPanel, setServoPanel] = useState({ h: 90, v: 45 });
+
+  // Estado para habilitar/deshabilitar el modo manual de la cámara
   const [modoManualCam, setModoManualCam] = useState(false);
+
+  // Estado para habilitar/deshabilitar el modo manual del panel solar
   const [modoManualPanel, setModoManualPanel] = useState(false);
+
+  // Resolución de movimiento horizontal de la cámara (cuántos grados por paso)
   const [resCamH, setResCamH] = useState(5);
+
+  // Resolución de movimiento vertical de la cámara (cuántos grados por paso)
   const [resCamV, setResCamV] = useState(5);
+
+  // Resolución de movimiento horizontal del panel solar
   const [resPanelH, setResPanelH] = useState(5);
+
+  // Resolución de movimiento vertical del panel solar
   const [resPanelV, setResPanelV] = useState(5);
 
+  // URL pública del servidor ngrok donde está disponible el stream de la ESP32-CAM
   const urlNgrok = 'https://2071-157-100-141-154.ngrok-free.app';
 
+  // Función que envía un comando al documento en Firestore que escucha el ESP32/panel
   const enviarComando = async (target, comando) => {
+    // Construye el payload con el prefijo (cam o panel) y el comando
     const payload = `${target === 'camara' ? 'cam' : 'panel'}:${comando}`;
+    // Actualiza el documento en Firestore con el nuevo mensaje y timestamp
     await setDoc(doc(db, 'control', 'servos'), {
       mensaje: payload,
       updated_at: new Date().toISOString(),
     }, { merge: true });
   };
 
+  // Función para formatear un comando con las posiciones h y v a formato Txxxxyyyy
   const formatearComando = (h, v) => {
+    // Rellena los números con ceros a la izquierda hasta completar 3 dígitos
     const pad = (n, size) => n.toString().padStart(size, '0');
     return `T${pad(h, 3)}${pad(v, 3)}`;
   };
 
+  // Componente ControlBox: Controla la cámara o el panel solar en modo manual
   const ControlBox = ({ label, target, modoManual, setModoManual, resH, setResH, resV, setResV }) => {
+    // Estado para resaltar el botón presionado (highlight visual)
     const [highlight, setHighlight] = useState('');
 
+    // Obtiene el estado actual del servo y su setter según el target (camara o panel)
     const servo = target === 'camara' ? servoCam : servoPanel;
     const setServo = target === 'camara' ? setServoCam : setServoPanel;
 
+    // Función para mover el servo en horizontal o vertical
     const mover = (eje, dir) => {
-      if (!modoManual) return;
+      if (!modoManual) return; // Solo se puede mover en modo manual
 
-      const paso = eje === 'h' ? resH : resV;
-      const limite = eje === 'h' ? 180 : 90;
-      const direccion = dir === 'mas' ? 1 : -1;
-      const nuevoValor = Math.max(0, Math.min(limite, servo[eje] + direccion * paso));
+      const paso = eje === 'h' ? resH : resV;              // Resuelve resolución horizontal o vertical
+      const limite = eje === 'h' ? 180 : 90;              // Limita el rango de movimiento
+      const direccion = dir === 'mas' ? 1 : -1;           // Determina si aumenta o disminuye
+      const nuevoValor = Math.max(0, Math.min(limite, servo[eje] + direccion * paso)); // Calcula nuevo valor dentro de los límites
 
-      const nuevo = { ...servo, [eje]: nuevoValor };
-      setServo(nuevo);
-      const comando = formatearComando(nuevo.h, nuevo.v);
-      enviarComando(target, comando);
+      const nuevo = { ...servo, [eje]: nuevoValor };      // Crea nuevo estado del servo
+      setServo(nuevo);                                    // Actualiza el estado
+      const comando = formatearComando(nuevo.h, nuevo.v); // Formatea el comando
+      enviarComando(target, comando);                     // Envía el comando a Firestore
     };
 
+    // Activa el modo manual y centra los servos en posición inicial
     const activarManual = () => {
       const comando = formatearComando(90, 45);
       setServo({ h: 90, v: 45 });
@@ -56,6 +111,7 @@ export const Camara = () => {
       setModoManual(true);
     };
 
+    // Desactiva el modo manual y envía comando para volver a automático
     const desactivarManual = () => {
       const payload = `${target === 'camara' ? 'cam' : 'panel'}:F`;
       setModoManual(false);
@@ -65,6 +121,7 @@ export const Camara = () => {
       }, { merge: true });
     };
 
+    // Manejador para movimientos con teclado
     const handleKey = (e) => {
       if (!modoManual) return;
 
@@ -79,14 +136,17 @@ export const Camara = () => {
         if (e.key === '4') { mover('h', 'mas'); setHighlight('left'); }
         if (e.key === '6') { mover('h', 'menos'); setHighlight('right'); }
       }
+      // Quita el highlight tras 150ms
       setTimeout(() => setHighlight(''), 150);
     };
 
+    // Registra y elimina el listener de teclado
     useEffect(() => {
       window.addEventListener('keydown', handleKey);
       return () => window.removeEventListener('keydown', handleKey);
     });
 
+    // Botón individual para los controles de dirección
     const ControlButton = ({ onClick, Icon, name }) => (
       <button
         onClick={() => { onClick(); setHighlight(name); setTimeout(() => setHighlight(''), 150); }}
@@ -98,8 +158,10 @@ export const Camara = () => {
 
     return (
       <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-cyan-500 shadow-md flex flex-col items-center space-y-4 w-fit">
+        {/* Título del control */}
         <h3 className="text-lg font-semibold text-black dark:text-white">{label}</h3>
 
+        {/* Controles de dirección en una cuadrícula */}
         <div className="grid grid-cols-3 grid-rows-3 gap-2">
           <div></div>
           <ControlButton onClick={() => mover('v', 'menos')} Icon={ArrowUp} name="up" />
@@ -114,6 +176,7 @@ export const Camara = () => {
           <div></div>
         </div>
 
+        {/* Sliders para ajustar la resolución horizontal y vertical */}
         <div className="flex flex-col space-y-4 w-full mt-4">
           <div className="text-sm text-black dark:text-white">
             Resolución H: <span className="font-semibold">{resH}</span>
@@ -139,6 +202,7 @@ export const Camara = () => {
           </div>
         </div>
 
+        {/* Botón para activar o desactivar el modo manual */}
         <div className="flex gap-2 mt-2">
           <button
             onClick={modoManual ? desactivarManual : activarManual}
@@ -152,11 +216,19 @@ export const Camara = () => {
   };
 
   return (
+    // Contenedor principal, pantalla completa con fondo adaptable claro/oscuro
     <div className="flex flex-col items-center justify-center p-6 space-y-8 bg-white dark:bg-zinc-900 min-h-screen transition-colors duration-500">
-      <h2 className="text-2xl font-bold text-center text-black dark:text-white">ESP32-CAM en Tiempo Real</h2>
 
+      {/* Título principal de la página */}
+      <h2 className="text-2xl font-bold text-center text-black dark:text-white">
+        ESP32-CAM en Tiempo Real
+      </h2>
+
+      {/* Si el stream aún no está activo, muestra botón para iniciarlo */}
       {!streamActivo ? (
         <div className="w-[640px] h-[480px] bg-gray-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center shadow-lg border border-dashed border-gray-400 dark:border-zinc-500">
+
+          {/* Botón para activar el stream */}
           <button
             onClick={() => setStreamActivo(true)}
             className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded shadow cursor-pointer"
@@ -164,8 +236,12 @@ export const Camara = () => {
             Iniciar Cámara
           </button>
         </div>
+
       ) : (
+        // Si el stream está activo, muestra los controles y el stream en vivo
         <div className="flex flex-col lg:flex-row items-center justify-center gap-6">
+
+          {/* ControlBox para la cámara */}
           <ControlBox
             label="Control Cámara"
             target="camara"
@@ -176,14 +252,21 @@ export const Camara = () => {
             resV={resCamV}
             setResV={setResCamV}
           />
+
+          {/* Sección central con el stream */}
           <div className="flex flex-col items-center">
+            {/* Llama a la ruta /activar-stream en segundo plano para activar la cámara */}
             <iframe src={`${urlNgrok}/activar-stream`} style={{ display: 'none' }} />
+
+            {/* Muestra el stream en un iframe principal */}
             <iframe
               src={urlNgrok}
               title="Stream ESP32-CAM"
               className="w-[640px] h-[480px] border-4 border-gray-300 rounded-lg shadow-lg object-fill"
               allow="autoplay"
             />
+
+            {/* Botón para detener el stream */}
             <button
               onClick={() => setStreamActivo(false)}
               className="mt-4 px-5 py-2 rounded text-white text-lg bg-red-600 hover:bg-red-700 cursor-pointer"
@@ -191,6 +274,8 @@ export const Camara = () => {
               Detener cámara
             </button>
           </div>
+
+          {/* ControlBox para el panel solar */}
           <ControlBox
             label="Control Panel Solar"
             target="panel"

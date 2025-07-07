@@ -5,9 +5,30 @@ import { FiHome, FiGrid, FiCamera, FiKey, FiLogOut } from 'react-icons/fi';
 import { FaServer } from 'react-icons/fa';
 import { MdAdminPanelSettings } from 'react-icons/md';
 
+/**
+ * SidebarDashboard
+ *
+ * Componente que renderiza la barra lateral (sidebar) del panel de control.
+ *
+ * Muestra:
+ * - La información básica del usuario autenticado (nombre y foto).
+ * - Un listado de enlaces de navegación hacia las diferentes secciones de la app.
+ * - Un botón para cerrar sesión.
+ *
+ * Los enlaces mostrados dependen del rol del usuario; si el rol es `3`, incluye también el enlace de administrador.
+ *
+ * Usa:
+ * - Contexto `UserContext` para obtener los datos del usuario y la función `cerrarSesion`.
+ * - React Router `NavLink` para resaltar el enlace activo.
+ * - Iconos de react-icons para acompañar los enlaces y botones.
+ *
+ * Estilizado con TailwindCSS.
+ */
+
 export const SidebarDashboard = () => {
   const { user, cerrarSesion } = useContext(UserContext); 
 
+  // Array con los enlaces de navegación disponibles
   const enlaces = [
     { to: '/inicio', label: 'Inicio', icon: <FiHome /> },
     { to: '/dashboard', label: 'Dashboard', icon: <FiGrid /> },
@@ -17,14 +38,17 @@ export const SidebarDashboard = () => {
     { to: '/dispositivos', label: 'Dispositivos', icon: <FiGrid /> },
   ];
 
+  // Si el usuario tiene rol de administrador (3), agrega enlace a la sección Admin
   if (user?.rol === 3) {
     enlaces.push({ to: '/admin', label: 'Admin', icon: <MdAdminPanelSettings /> });
   }
 
   return (
+    // Contenedor de la sidebar: fija al lado izquierdo, ocupa toda la altura
     <div className="fixed top-0 left-0 h-full w-56 bg-white dark:bg-black border-r border-gray-300 dark:border-gray-700 shadow-lg z-50 px-4 py-6 flex flex-col justify-between">
+      
       <div>
-        {/* Perfil del usuario */}
+        {/* Sección del perfil del usuario */}
         <div className="flex flex-col items-center mb-8">
           <img
             src={user?.photoURL || 'https://via.placeholder.com/80'}
@@ -36,7 +60,7 @@ export const SidebarDashboard = () => {
           </h2>
         </div>
 
-        {/* Navegación */}
+        {/* Navegación: lista de enlaces */}
         <nav className="flex flex-col gap-4">
           {enlaces.map((item) => (
             <NavLink
@@ -44,10 +68,13 @@ export const SidebarDashboard = () => {
               to={item.to}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2 rounded-lg text-base font-semibold transition hover:bg-sky-100 dark:hover:bg-gray-800 ${
-                  isActive ? 'bg-sky-200 dark:bg-gray-700 text-sky-700' : 'text-gray-600 dark:text-gray-300'
+                  isActive
+                    ? 'bg-sky-200 dark:bg-gray-700 text-sky-700'
+                    : 'text-gray-600 dark:text-gray-300'
                 }`
               }
             >
+              {/* Icono y etiqueta del enlace */}
               {item.icon}
               {item.label}
             </NavLink>
@@ -55,7 +82,7 @@ export const SidebarDashboard = () => {
         </nav>
       </div>
 
-      {/* Botón de cerrar sesión */}
+      {/* Botón para cerrar sesión */}
       <button
         onClick={cerrarSesion}
         className="flex items-center gap-3 px-4 py-2 mt-8 rounded-lg text-base font-semibold text-red-500 hover:bg-red-100 dark:hover:bg-red-900 transition"
@@ -66,3 +93,4 @@ export const SidebarDashboard = () => {
     </div>
   );
 };
+

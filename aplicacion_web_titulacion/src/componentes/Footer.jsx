@@ -80,6 +80,7 @@ export const Footer = () => {
 
                 </div>
 
+                {/* Texto final de la aplicación web */}
                 <div className='text-black -mt-1   mb-0.5  text-center dark:text-white  font-semibold text-xs'>
                     <p>&copy; Todos los derechos reservados 2025 | Trabajo de Titulación: Sistema Inteligente Basado en Machine Learning para Predecir la Producción de Energía Solar | Integrantes: Fernando González, Dayana Paladines  </p>
                 </div>

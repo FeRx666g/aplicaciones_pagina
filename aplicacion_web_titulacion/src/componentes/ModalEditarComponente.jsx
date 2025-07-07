@@ -2,9 +2,28 @@ import { useState, useEffect, useContext } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { UserContext } from '../providers/UserProvider';
+import Swal from 'sweetalert2';
+
+/**
+ * ModalEditarComponente
+ *
+ * Este componente renderiza un modal para editar la configuración de un componente del dashboard.
+ * Soporta distintos tipos de componente como: gráficos, texto, formas, tabla-ml-tiempo-real, herramienta-ml, etc.
+ *
+ * Permite editar propiedades específicas de cada tipo, como: título, colores, dispositivos y campos, ejes, textos, sombra, etc.
+ *
+ * Props:
+ * - componente: Objeto que representa el componente a editar, con su tipo y configuración actual.
+ * - onClose: Función callback para cerrar el modal.
+ * - onGuardar: Función callback para guardar los cambios con la configuración actualizada.
+ *
+ * Usa Firestore para cargar dispositivos y sus campos asociados.
+ */
 
 export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
   const { user } = useContext(UserContext);
+
+  // Estados principales del formulario
   const [titulo, setTitulo] = useState('');
   const [idDispositivo, setIdDispositivo] = useState('');
   const [campo, setCampo] = useState('');
@@ -21,6 +40,8 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
   const [fechaFin, setFechaFin] = useState('');
   const esMultiple = ['grafico-area-stack', 'grafico-linea-multiple'].includes(componente?.tipo);
   const esForma = componente?.tipo?.startsWith('forma');
+
+  // Configuración para el tipo texto
   const [configTexto, setConfigTexto] = useState({
     contenido: '',
     color: '#000000',
@@ -32,6 +53,8 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
     alineacion: 'left'
   });
   const [config, setConfig] = useState({})
+
+  // Configuración local 
   const [configLocal, setConfigLocal] = useState({
     ...(componente.config || {}),
     columnas: componente.config?.columnas || []
@@ -41,7 +64,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
   );
   const todasLasClavesModelo = ['temperatura', 'humedad', 'irradiancia', 'lux', 'nubosidad'];
 
-
+  // Inicializar valores cuando cambia el componente
   useEffect(() => {
     if (componente?.config?.titulo) setTitulo(componente.config.titulo);
     if (componente?.config?.id_dispositivo) setIdDispositivo(componente.config.id_dispositivo);
@@ -75,9 +98,9 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
     }));
   }, [componente]);
 
+  // Bloquear flechas del teclado cuando hay un input activo
   useEffect(() => {
     const bloquearFlechas = (e) => {
-      // Si estás en un input o textarea y se presiona una tecla de flecha
       const esFlecha = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
       const esInputActivo = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
 
@@ -93,7 +116,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
     };
   }, []);
 
-
+  // Cargar campos por columnas si es tabla-ml-tiempo-real
   useEffect(() => {
     const cargarCamposPorColumnas = async () => {
       const nuevo = { ...camposPorDispositivo };
@@ -128,6 +151,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
   }, [configLocal.columnas]);
 
 
+  // Cargar campos del dispositivo seleccionado
   useEffect(() => {
     const cargarCamposDeDispositivo = async () => {
       if (!idDispositivo || camposPorDispositivo[idDispositivo]) return;
@@ -159,6 +183,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
   }, [idDispositivo]);
 
 
+  // Cargar dispositivos del usuario
   useEffect(() => {
     const cargarDispositivos = async () => {
       const ref = collection(db, 'usuarios', user.uid, 'dispositivos');
@@ -169,6 +194,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
     if (user) cargarDispositivos();
   }, [user]);
 
+  // Cargar campos para las fuentes si es modo múltiple
   useEffect(() => {
     const obtenerCamposPorFuente = async () => {
       const nuevo = { ...camposPorDispositivo };
@@ -198,12 +224,20 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
     if (esMultiple) obtenerCamposPorFuente();
   }, [fuentes]);
 
+  // Validar campos antes de guardar
   const guardarCambios = () => {
-    if (cantidadMaxima < 0 || cantidadMaxima > 5000) {
-      alert("La cantidad de datos debe estar entre 0 y 5000.");
+    // Validar que la cantidad máxima esté dentro del rango permitido
+    if (!cantidadMaxima || cantidadMaxima < 1 || cantidadMaxima > 5000) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Cantidad inválida',
+        text: 'La cantidad de datos debe estar entre 1 y 5000.',
+      });
       return;
     }
 
+
+    // Caso específico: guardar configuración para componente de tipo 'herramienta-ml'
     if (componente?.tipo === 'herramienta-ml') {
       onGuardar({
         ...componente.config,
@@ -217,7 +251,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
       return;
     }
 
-
+    // Caso específico: guardar configuración para componente de tipo 'texto'
     if (componente?.tipo === 'texto') {
       onGuardar({
         ...configTexto,
@@ -226,6 +260,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
       return;
     }
 
+    // Caso específico: guardar configuración para componente de tipo 'tabla-ml-tiempo-real'
     if (componente?.tipo === 'tabla-ml-tiempo-real') {
       onGuardar({
         ...componente.config,
@@ -238,12 +273,13 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
         alto: configLocal.alto ?? 85,
         eficiencia: configLocal.eficiencia ?? 15,
         prediccion: {
-          endpoint: "https://mlp-backend-519521736458.us-central1.run.app/predecir"
+          endpoint: "https://ml-backend-519521736458.us-central1.run.app/predecir"
         }
       });
       return;
     }
 
+    // Caso específico: guardar configuración para componentes que empiezan con 'forma'
     if (componente?.tipo?.startsWith('forma')) {
       onGuardar({
         ...componente.config,
@@ -253,14 +289,21 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
       return;
     }
 
+    // Validar que todas las fuentes estén completas en componentes múltiples
     if (esMultiple && Array.isArray(fuentes)) {
       const fuentesValidas = fuentes.filter(f => f.id_dispositivo?.trim() && f.campo?.trim());
       if (fuentesValidas.length !== fuentes.length) {
-        alert("Por favor completa todos los campos de las fuentes antes de guardar.");
-        return;
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campos incompletos',
+          text: 'Por favor completa todos los campos de las fuentes antes de guardar.',
+          confirmButtonColor: '#3085d6'
+        });
+        return; // detener si no están completas
       }
     }
 
+    // Caso general: guardar configuración para los demás tipos de componentes
     onGuardar({
       ...componente.config,
       titulo,
@@ -274,6 +317,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
       fechaInicio,
       fechaFin,
 
+      // Dependiendo si es múltiple o no, agrega las propiedades correspondientes
       ...(esMultiple
         ? {
           fuentes,
@@ -286,10 +330,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
           valores: componente.config?.valores || [],
           etiquetas: componente.config?.etiquetas || [],
         }),
-
     });
-
-
   };
 
   return (
@@ -297,20 +338,34 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
       <div className="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Editar componente</h2>
 
-        <label className="block text-sm font-medium text-gray-700 mb-1">Título del gráfico</label>
+        {/* Etiqueta para el campo de título */}
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Título del gráfico
+        </label>
+
+        {/* Campo de entrada para escribir el título del gráfico */}
         <input
           type="text"
           className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          placeholder="Ej. Temperatura en el aula"
+          value={titulo} // el valor actual del estado `titulo`
+          onChange={(e) => setTitulo(e.target.value)} // actualiza el estado al escribir
+          placeholder="Ej. Temperatura en el aula" // texto de ejemplo
         />
 
+
+        {/* Si el componente es de tipo 'tabla-ml-tiempo-real', renderiza el formulario de columnas */}
         {componente?.tipo === 'tabla-ml-tiempo-real' && (
           <>
-            <h3 className="font-semibold text-gray-700 mb-2">Columnas (nombre + dispositivo + campo + unidad)</h3>
+            {/* Título de la sección */}
+            <h3 className="font-semibold text-gray-700 mb-2">
+              Columnas (nombre + dispositivo + campo + unidad)
+            </h3>
+
+            {/* Itera sobre las columnas configuradas para editarlas */}
             {(configLocal.columnas || []).map((col, index) => (
               <div key={index} className="grid grid-cols-6 gap-2 mb-2 items-center">
+
+                {/* Input para el nombre de la columna */}
                 <input
                   type="text"
                   placeholder="Nombre"
@@ -322,23 +377,28 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                     setConfigLocal({ ...configLocal, columnas: nuevas });
                   }}
                 />
+
+                {/* Selector de dispositivo */}
                 <select
                   value={col.id_dispositivo}
                   className="input-form"
                   onChange={(e) => {
                     const nuevas = [...configLocal.columnas];
                     nuevas[index].id_dispositivo = e.target.value;
-                    nuevas[index].campo = '';
+                    nuevas[index].campo = ''; // al cambiar dispositivo, limpia el campo
                     setConfigLocal({ ...configLocal, columnas: nuevas });
                   }}
                 >
                   <option value="">Dispositivo</option>
+                  {/* Opciones de dispositivos disponibles */}
                   {dispositivos.map((d) => (
                     <option key={d.id_dispositivo} value={d.id_dispositivo}>
                       {d.nombre || d.id_dispositivo}
                     </option>
                   ))}
                 </select>
+
+                {/* Selector de campo del dispositivo */}
                 <select
                   value={col.campo}
                   className="input-form"
@@ -349,10 +409,13 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                   }}
                 >
                   <option value="">Campo</option>
+                  {/* Opciones de campos disponibles para el dispositivo seleccionado */}
                   {(camposPorDispositivo[col.id_dispositivo] || []).map((campo) => (
                     <option key={campo} value={campo}>{campo}</option>
                   ))}
                 </select>
+
+                {/* Input para la unidad de medida (opcional) */}
                 <input
                   type="text"
                   placeholder="Unidad (opcional)"
@@ -364,6 +427,8 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                     setConfigLocal({ ...configLocal, columnas: nuevas });
                   }}
                 />
+
+                {/* Selector de variable del modelo ML asociada */}
                 <select
                   className="input-form"
                   value={col.clave_modelo || ''}
@@ -374,6 +439,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                   }}
                 >
                   <option value="">Variable ML</option>
+                  {/* Filtra para que cada variable ML solo se asigne a una columna */}
                   {todasLasClavesModelo
                     .filter((clave) =>
                       !(configLocal.columnas || []).some((c, i) => i !== index && c.clave_modelo === clave)
@@ -382,6 +448,8 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                       <option key={clave} value={clave}>{clave}</option>
                     ))}
                 </select>
+
+                {/* Botón para eliminar esta columna */}
                 <button
                   onClick={() => {
                     const nuevas = [...configLocal.columnas];
@@ -396,6 +464,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               </div>
             ))}
 
+            {/* Botón para agregar una nueva columna vacía */}
             <button
               onClick={() =>
                 setConfigLocal({
@@ -412,35 +481,47 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
           </>
         )}
 
+
+        {/* Si el componente es de tipo 'tabla-ml-tiempo-real', muestra el input para costo por kWh */}
         {componente?.tipo === 'tabla-ml-tiempo-real' && (
           <div className="mb-4">
+            {/* Etiqueta del input */}
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Costo por kWh (USD)
             </label>
+
+            {/* Input numérico para especificar el costo por kWh */}
             <input
               type="number"
               min={0}
               step={0.01}
               className="w-full border border-gray-300 rounded px-3 py-2"
-              value={costoKWh}
-              onChange={(e) => setCostoKWh(parseFloat(e.target.value) || 0.10)}
+              value={costoKWh} // valor actual del estado
+              onChange={(e) => setCostoKWh(parseFloat(e.target.value) || 0.10)} // actualiza estado
             />
           </div>
         )}
 
+        {/* Si el componente es de tipo 'herramienta-ml', muestra configuración de panel solar */}
         {componente?.tipo === 'herramienta-ml' && (
           <>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ancho del panel (mm)</label>
+            {/* Input para ancho del panel en mm */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ancho del panel (mm)
+            </label>
             <input
               type="number"
-              value={configLocal.ancho || 137}
+              value={configLocal.ancho || 137} // valor actual
               onChange={(e) =>
                 setConfigLocal({ ...configLocal, ancho: parseFloat(e.target.value) })
               }
               className="w-full border border-gray-300 rounded px-3 py-2 mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Alto del panel (mm)</label>
+            {/* Input para alto del panel en mm */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alto del panel (mm)
+            </label>
             <input
               type="number"
               value={configLocal.alto || 85}
@@ -450,7 +531,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               className="w-full border border-gray-300 rounded px-3 py-2 mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Eficiencia del panel (%)</label>
+            {/* Input para eficiencia del panel en % */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Eficiencia del panel (%)
+            </label>
             <input
               type="number"
               value={configLocal.eficiencia || 15}
@@ -460,7 +544,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               className="w-full border border-gray-300 rounded px-3 py-2 mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Costo por kWh (USD)</label>
+            {/* Input para costo por kWh */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Costo por kWh (USD)
+            </label>
             <input
               type="number"
               value={costoKWh}
@@ -470,23 +557,34 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
           </>
         )}
 
+
+        {/* Si es un componente múltiple (ej. gráfico con varias series) */}
         {esMultiple ? (
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fuentes (dispositivo + campo)</label>
+            {/* Etiqueta para la sección de fuentes */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fuentes (dispositivo + campo)
+            </label>
+
+            {/* Itera sobre cada fuente configurada */}
             {fuentes.map((fuente, idx) => (
               <div key={idx} className="flex gap-2 mb-2">
+
+                {/* Selector de dispositivo para esta fuente */}
                 <select
                   className="flex-1 border border-gray-300 rounded px-2 py-1"
                   value={fuente.id_dispositivo}
                   onChange={(e) => {
                     const copia = [...fuentes];
                     copia[idx].id_dispositivo = e.target.value;
-                    copia[idx].campo = ''; // Reset campo
-                    copia[idx].nombre_dispositivo = dispositivos.find(d => d.id_dispositivo === e.target.value)?.nombre || '';
+                    copia[idx].campo = ''; // limpia el campo cuando cambia dispositivo
+                    copia[idx].nombre_dispositivo =
+                      dispositivos.find(d => d.id_dispositivo === e.target.value)?.nombre || '';
                     setFuentes(copia);
                   }}
                 >
                   <option value="">Dispositivo</option>
+                  {/* Lista de dispositivos disponibles */}
                   {dispositivos.map((d) => (
                     <option key={d.id_dispositivo} value={d.id_dispositivo}>
                       {d.nombre} ({d.tipo})
@@ -494,6 +592,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                   ))}
                 </select>
 
+                {/* Selector de campo para el dispositivo seleccionado */}
                 <select
                   className="flex-1 border border-gray-300 rounded px-2 py-1"
                   value={fuente.campo || ''}
@@ -504,11 +603,13 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                   }}
                 >
                   <option value="">Campo</option>
+                  {/* Lista de campos disponibles para el dispositivo seleccionado */}
                   {(camposPorDispositivo[fuente.id_dispositivo] || []).map((campo) => (
                     <option key={campo} value={campo}>{campo}</option>
                   ))}
                 </select>
 
+                {/* Botón para eliminar esta fuente */}
                 <button
                   className="text-red-500"
                   onClick={() => {
@@ -521,6 +622,8 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                 </button>
               </div>
             ))}
+
+            {/* Botón para añadir una nueva fuente vacía */}
             <button
               onClick={() => setFuentes([...fuentes, { id_dispositivo: '', campo: '' }])}
               className="text-blue-600 underline text-sm"
@@ -529,18 +632,21 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
             </button>
           </div>
         ) : (
-
           <>
-
+            {/* Si NO es múltiple y tampoco es tabla-ml-tiempo-real ni herramienta-ml */}
             {!['tabla-ml-tiempo-real', 'herramienta-ml'].includes(componente?.tipo) && (
               <>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dispositivo</label>
+                {/* Selector de dispositivo */}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Dispositivo
+                </label>
                 <select
                   className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
                   value={idDispositivo}
                   onChange={(e) => setIdDispositivo(e.target.value)}
                 >
                   <option value="">Selecciona un dispositivo</option>
+                  {/* Lista de dispositivos disponibles */}
                   {dispositivos.map((d) => (
                     <option key={d.id_dispositivo} value={d.id_dispositivo}>
                       {d.nombre} ({d.tipo})
@@ -548,13 +654,17 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                   ))}
                 </select>
 
-                <label className="block text-sm font-medium text-gray-700 mb-1">Campo a mostrar</label>
+                {/* Selector de campo */}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Campo a mostrar
+                </label>
                 <select
                   className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
                   value={campo}
                   onChange={(e) => setCampo(e.target.value)}
                 >
                   <option value="">Selecciona un campo</option>
+                  {/* Lista de campos disponibles para el dispositivo seleccionado */}
                   {(camposPorDispositivo[idDispositivo] || []).map((campo) => (
                     <option key={campo} value={campo}>{campo}</option>
                   ))}
@@ -564,34 +674,47 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
           </>
         )}
 
+
+        {/* Si el componente es de tipo 'texto', muestra las opciones de configuración de texto */}
         {componente?.tipo === 'texto' && (
           <>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contenido</label>
+            {/* Contenido del texto */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contenido
+            </label>
             <textarea
               className="w-full border border-gray-300 rounded px-3 py-2 mb-2"
-              value={configTexto.contenido}
-              onChange={(e) => setConfigTexto({ ...configTexto, contenido: e.target.value })}
+              value={configTexto.contenido} // estado actual del contenido
+              onChange={(e) => setConfigTexto({ ...configTexto, contenido: e.target.value })} // actualiza el contenido
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+            {/* Color del texto */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Color
+            </label>
             <input
               type="color"
-              value={configTexto.color}
-              onChange={(e) => setConfigTexto({ ...configTexto, color: e.target.value })}
+              value={configTexto.color} // estado actual del color
+              onChange={(e) => setConfigTexto({ ...configTexto, color: e.target.value })} // actualiza color
               className="mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tamaño de fuente</label>
+            {/* Tamaño de la fuente */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tamaño de fuente
+            </label>
             <input
               type="number"
-              min={8}
-              max={64}
+              min={8} max={64} // límites para el tamaño
               value={configTexto.fontSize}
               onChange={(e) => setConfigTexto({ ...configTexto, fontSize: parseInt(e.target.value) || 16 })}
               className="mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de letra</label>
+            {/* Tipo de letra (fuente) */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo de letra
+            </label>
             <select
               value={configTexto.fontFamily}
               onChange={(e) => setConfigTexto({ ...configTexto, fontFamily: e.target.value })}
@@ -603,6 +726,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               <option value="Courier New">Courier New</option>
             </select>
 
+            {/* Opciones de formato: negrita, cursiva, subrayado */}
             <div className="flex items-center gap-4 mb-4">
               <label className="flex items-center gap-2">
                 <input
@@ -630,7 +754,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               </label>
             </div>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Alineación</label>
+            {/* Alineación del texto */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alineación
+            </label>
             <select
               value={configTexto.alineacion}
               onChange={(e) => setConfigTexto({ ...configTexto, alineacion: e.target.value })}
@@ -643,49 +770,68 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
           </>
         )}
 
+
+        {/* Si el componente es una forma (su tipo comienza con 'forma') */}
         {componente?.tipo?.startsWith('forma') && (
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Color de relleno</label>
+            {/* Selector de color de relleno */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Color de relleno
+            </label>
             <input
               type="color"
-              value={config.colorRelleno}
+              value={config.colorRelleno} // estado actual del color de relleno
               onChange={e => setConfig({ ...config, colorRelleno: e.target.value })}
               className="w-full h-10 mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Color del borde</label>
+            {/* Selector de color del borde */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Color del borde
+            </label>
             <input
               type="color"
-              value={config.colorBorde}
+              value={config.colorBorde} // estado actual del color del borde
               onChange={e => setConfig({ ...config, colorBorde: e.target.value })}
               className="w-full h-10 mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Grosor del borde</label>
+            {/* Grosor del borde en píxeles */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Grosor del borde
+            </label>
             <input
               type="number"
-              value={config.grosorBorde}
+              value={config.grosorBorde} // estado actual del grosor
               onChange={e => setConfig({ ...config, grosorBorde: parseInt(e.target.value) || 1 })}
               className="w-full border border-gray-300 rounded px-3 py-2"
             />
           </div>
         )}
 
+        {/* Si es una forma, también muestra la rotación */}
         {esForma && (
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rotación (grados)</label>
+            {/* Rotación en grados */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Rotación (grados)
+            </label>
             <input
               type="number"
-              value={config.rotacion || 0}
+              value={config.rotacion || 0} // estado actual de rotación
               onChange={(e) => setConfig({ ...config, rotacion: parseInt(e.target.value) || 0 })}
               className="w-full border border-gray-300 rounded px-2 py-1"
             />
           </div>
         )}
 
+        {/* Si el componente es 'tabla-ml-tiempo-real', muestra configuración de panel */}
         {componente?.tipo === 'tabla-ml-tiempo-real' && (
           <>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ancho del panel (mm)</label>
+            {/* Ancho del panel en mm */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ancho del panel (mm)
+            </label>
             <input
               type="number"
               value={configLocal.ancho || 137}
@@ -695,7 +841,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               className="w-full border border-gray-300 rounded px-3 py-2 mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Alto del panel (mm)</label>
+            {/* Alto del panel en mm */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alto del panel (mm)
+            </label>
             <input
               type="number"
               value={configLocal.alto || 85}
@@ -705,7 +854,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               className="w-full border border-gray-300 rounded px-3 py-2 mb-2"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Eficiencia del panel (%)</label>
+            {/* Eficiencia del panel en % */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Eficiencia del panel (%)
+            </label>
             <input
               type="number"
               value={configLocal.eficiencia || 15}
@@ -717,10 +869,13 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
           </>
         )}
 
-
+        {/* Si el componente NO es 'tabla-ml-tiempo-real' ni 'herramienta-ml', muestra opciones generales */}
         {!['tabla-ml-tiempo-real', 'herramienta-ml'].includes(componente?.tipo) && (
           <>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mínimo eje Y</label>
+            {/* Mínimo del eje Y */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mínimo eje Y
+            </label>
             <input
               type="number"
               className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
@@ -729,7 +884,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               placeholder="Ej. 0"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Máximo eje Y</label>
+            {/* Máximo del eje Y */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Máximo eje Y
+            </label>
             <input
               type="number"
               className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
@@ -738,7 +896,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               placeholder="Ej. 1000"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción eje X</label>
+            {/* Descripción para el eje X */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descripción eje X
+            </label>
             <input
               type="text"
               className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
@@ -747,7 +908,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               placeholder="Ej. Tiempo (s)"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción eje Y</label>
+            {/* Descripción para el eje Y */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descripción eje Y
+            </label>
             <input
               type="text"
               className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
@@ -756,7 +920,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               placeholder="Ej. Temperatura (°C)"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Color del gráfico</label>
+            {/* Color del gráfico */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Color del gráfico
+            </label>
             <input
               type="color"
               className="w-full h-10 border border-gray-300 rounded px-3 py-2 mb-4"
@@ -764,8 +931,10 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               onChange={(e) => setColor(e.target.value)}
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad de datos a mostrar</label>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
+            {/* 
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha inicio
+            </label>
             <input
               type="datetime-local"
               className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
@@ -773,36 +942,53 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
               onChange={(e) => setFechaInicio(e.target.value)}
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha fin
+            </label>
             <input
               type="datetime-local"
               className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
               value={fechaFin}
               onChange={(e) => setFechaFin(e.target.value)}
             />
+            */}
 
+            {/* Cantidad máxima de datos */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cantidad máxima de datos a mostrar
+            </label>
             <input
               type="number"
               min={1}
               max={200}
               className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
               value={cantidadMaxima}
-              onChange={(e) => setCantidadMaxima(parseInt(e.target.value) || 20)}
+              onChange={(e) => {
+                const valor = e.target.value;
+                if (valor === '') {
+                  setCantidadMaxima(''); // permite que esté vacío mientras escribe
+                } else {
+                  setCantidadMaxima(Number(valor));
+                }
+              }}
               placeholder="Ej. 20"
             />
 
           </>
         )}
+
+        {/* Checkbox para quitar la sombra del componente */}
         <label className="flex items-center gap-2 mb-4 cursor-pointer">
           <input
             type="checkbox"
             className="accent-blue-600"
-            checked={configLocal.sinSombra || false}
-            onChange={(e) => setConfigLocal({ ...configLocal, sinSombra: e.target.checked })}
+            checked={configLocal.sinSombra || false} // estado actual de sombra
+            onChange={(e) => setConfigLocal({ ...configLocal, sinSombra: e.target.checked })} // actualiza sombra
           />
           <span>Quitar sombra</span>
         </label>
 
+        {/* Botones para cancelar o guardar cambios */}
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
