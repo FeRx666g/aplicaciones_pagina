@@ -84,14 +84,17 @@ export const Dashboard = () => {
 
   // Función para cargar los dispositivos desde Firestore
   const cargarDispositivos = async () => {
-    setLoading(true); // mostrar loading
+    setLoading(true);
     const ref = collection(db, 'usuarios', user.uid, 'dispositivos');
-    const snapshot = await getDocs(ref);
-    // Convertir los documentos en un array con id y datos
+
+    const q = query(ref, orderBy('creado', 'desc'));
+
+    const snapshot = await getDocs(q);
     const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setDispositivos(lista);
-    setLoading(false); // ocultar loading
+    setLoading(false);
   };
+
 
 
   // Función para cargar los tableros desde Firestore
@@ -323,7 +326,7 @@ export const Dashboard = () => {
 
   return (
     <div className="pl-60 pr-8 pt-6">
-      {/* Sidebar del dashboard (menú lateral) */} 
+      {/* Sidebar del dashboard (menú lateral) */}
       <SidebarDashboard />
 
       {/* Botones superiores para crear un dispositivo o un tablero */}

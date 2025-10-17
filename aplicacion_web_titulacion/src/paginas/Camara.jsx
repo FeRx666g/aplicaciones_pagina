@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot} from 'firebase/firestore';
 import { db } from '../firebase';
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -59,7 +59,19 @@ export const Camara = () => {
   const [resPanelV, setResPanelV] = useState(5);
 
   // URL pública del servidor ngrok donde está disponible el stream de la ESP32-CAM
-  const urlNgrok = 'https://2071-157-100-141-154.ngrok-free.app';
+  const [urlNgrok, setUrlNgrok] = useState('');
+
+  useEffect(() => {
+    const docRef = doc(db, 'configuracion', 'camara');
+    const unsubscribe = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setUrlNgrok(data.urlNgrok);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Función que envía un comando al documento en Firestore que escucha el ESP32/panel
   const enviarComando = async (target, comando) => {

@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react'
-import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, writeBatch, query, where } from 'firebase/firestore'
+import { collection, getDocs, getDoc, doc, updateDoc, deleteDoc, addDoc, writeBatch, query, setDoc, where } from 'firebase/firestore'
 import { db } from '../firebase'
 import UserContext from '../providers/UserProvider'
 import { AccesoRestringido } from '../componentes/AccesoRestringido'
@@ -55,8 +55,48 @@ export const Admin = () => {
   // Bandera para indicar si todos los datos están seleccionados
   const [todosSeleccionados, setTodosSeleccionados] = useState(false);
 
+  const [estadoScripts, setEstadoScripts] = useState({
+    "control-manual": false,
+    "receptor-esp32cam": false,
+    "publicador-backend": false,
+  });
+
+  const [cargandoScripts, setCargandoScripts] = useState(true);
+
   // Verifica si el usuario autenticado tiene rol de administrador
   const esAdmin = user?.rol === 3;
+
+  const [nuevoUrlNgrok, setNuevoUrlNgrok] = useState('');
+
+  const esUrlValida = (cadena) => {
+    if (!cadena || cadena.trim() === "") return false;
+
+    try {
+      const url = new URL(cadena.trim());
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
+  const guardarUrlNgrok = async () => {
+    if (!esUrlValida(nuevoUrlNgrok)) {
+      Swal.fire('Error', 'Debes ingresar una URL válida que comience con http:// o https://', 'error');
+      return;
+    }
+
+    try {
+      await setDoc(doc(db, 'configuracion', 'camara'), {
+        urlNgrok: nuevoUrlNgrok.trim(),
+        updated_at: new Date(),
+      }, { merge: true });
+      Swal.fire('Éxito', 'URL de la cámara actualizada', 'success');
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'No se pudo actualizar la URL', 'error');
+    }
+  };
+
 
   /**
    * consultarDatosPorFecha
@@ -235,6 +275,35 @@ export const Admin = () => {
 
 
   useEffect(() => {
+    const cargarEstadoScripts = async () => {
+      try {
+        const ref = doc(db, "control", "raspberry");
+        const snap = await getDoc(ref);
+
+        if (!snap.exists()) {
+          const estadoInicial = {
+            "control-manual": false,
+            "receptor-esp32cam": false,
+            "publicador-backend": false
+          };
+          await setDoc(ref, estadoInicial);
+          setEstadoScripts(estadoInicial);
+        } else {
+          setEstadoScripts(snap.data());
+        }
+
+      } catch (err) {
+        console.error(err);
+        Swal.fire("Error", "No se pudo cargar el estado de los scripts", "error");
+      } finally {
+        setCargandoScripts(false);
+      }
+    };
+    cargarEstadoScripts();
+  }, []);
+
+
+  useEffect(() => {
     // Si el usuario es admin, consulta la lista de usuarios al montar o cambiar `esAdmin`
     if (esAdmin) {
       consultarUsuarios();
@@ -246,8 +315,45 @@ export const Admin = () => {
     return <AccesoRestringido />;
   }
 
+  const actualizarScript = async (nombre, valor) => {
+    try {
+      const nuevoEstado = { ...estadoScripts, [nombre]: valor };
+      setEstadoScripts(nuevoEstado);
+      await setDoc(doc(db, "control", "raspberry"), nuevoEstado);
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Error", "No se pudo actualizar el estado en Firestore", "error");
+    }
+  };
+
+
   return (
     <div className=' '>
+
+      <div className="bg-white dark:bg-zinc-800 p-4 rounded shadow mb-4">
+        <h2 className="text-xl font-semibold mb-2">Control de Scripts en Raspberry</h2>
+        {cargandoScripts ? (
+          <p>Cargando estado de los scripts...</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {Object.keys(estadoScripts).map((script) => (
+              <div key={script} className="flex items-center justify-between">
+                <span className="capitalize">{script.replace("-", " ")}</span>
+                <label className="inline-flex relative items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={estadoScripts[script]}
+                    onChange={(e) => actualizarScript(script, e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Encabezado principal de la sección de usuarios */}
       <div className='div-externo '>
         <h1 className='text-2xl font-bold p-1 text-center block bg-white dark:bg-black rounded-full dark:text-white transition-all'>
@@ -283,16 +389,19 @@ export const Admin = () => {
                   {/* Campo editable para el rol */}
                   <div className="mt-1">
                     Rol:
-                    <input
-                      type="number"
-                      className="ml-2 w-16 px-1 border rounded"
+                    <select
+                      className="ml-2 px-1 border rounded"
                       value={usuario.rol}
                       onChange={(e) => {
                         const nuevos = [...usuarios];
                         nuevos[index].rol = parseInt(e.target.value);
-                        setUsuarios(nuevos); // Actualiza el estado local
+                        setUsuarios(nuevos);
                       }}
-                    />
+                    >
+                      <option value={1}>Usuario</option>
+                      <option value={3}>Administrador</option>
+                    </select>
+
                   </div>
                 </div>
               </div>
@@ -603,6 +712,26 @@ export const Admin = () => {
             </button>
           </>
         )}
+
+        <div className="mt-8 p-4 bg-white dark:bg-zinc-800 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2">Configurar URL de la Cámara</h2>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="https://mi-nuevo-link.ngrok.io"
+              value={nuevoUrlNgrok}
+              onChange={(e) => setNuevoUrlNgrok(e.target.value)}
+              className="flex-1 px-2 py-1 border rounded"
+            />
+            <button
+              onClick={guardarUrlNgrok}
+              className="px-4 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+
       </div>
 
     </div>

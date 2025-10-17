@@ -73,10 +73,15 @@ export const Dispositivos = () => {
   // Función para consultar y cargar los dispositivos del usuario desde Firestore
   const cargarDispositivos = async () => {
     const ref = collection(db, 'usuarios', user.uid, 'dispositivos');
-    const snapshot = await getDocs(ref);
+
+    // ordena por campo `creado` descendente (los más recientes primero)
+    const q = query(ref, orderBy('creado', 'desc'));
+
+    const snapshot = await getDocs(q);
     const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setDispositivos(lista);
   };
+
 
   // Efecto que escucha en tiempo real las últimas mediciones de los dispositivos
   useEffect(() => {

@@ -38,7 +38,7 @@ const nombresVariables = [
   'lux', 'temperatura', 'humedad', 'nubosidad'
 ];
 
-export const HerramientaML = ({ ancho = 500, alto = 300, config = {} }) => {
+export const HerramientaML = ({ ancho = 500, alto = 300, config = {}, onResultados }) => {
   const crearFilaVacia = () => Object.fromEntries(nombresVariables.map(v => [v, '']));
   const [filas, setFilas] = useState([crearFilaVacia()]);
   const [resultados, setResultados] = useState([]);
@@ -239,13 +239,18 @@ export const HerramientaML = ({ ancho = 500, alto = 300, config = {} }) => {
         const ahorro = energia_kWh * costoKWh;
 
         // Guarda los resultados
-        setResultados([{
+        const resultado = [{
+          hora: filas[0].hora,
+          minuto: filas[0].minuto,
           potencia,
           potenciaWatts,
           potenciaAjustadaWatts,
           energia: energia_kWh,
           ahorro
-        }]);
+        }];
+
+        setResultados(resultado);
+        if (onResultados) onResultados(resultado);
 
       } else {
         // Si hay varias filas → usa el endpoint `/predecir-multiple`
@@ -275,7 +280,8 @@ export const HerramientaML = ({ ancho = 500, alto = 300, config = {} }) => {
         const escala = (areaPanel / areaModelo) * (eficiencia / eficienciaModelo);
 
         // Recorre cada predicción y calcula métricas derivadas
-        const nuevosResultados = predicciones.map(potencia => {
+        const nuevosResultados = predicciones.map((potencia, idx) => {
+          const fila = filas[idx];
           const potenciaAjustada = potencia * escala;
           const potenciaWatts = potencia / 1000;
           const potenciaAjustadaWatts = potenciaAjustada / 1000;
@@ -283,16 +289,18 @@ export const HerramientaML = ({ ancho = 500, alto = 300, config = {} }) => {
           const ahorro = energia_kWh * costoKWh;
 
           return {
+            hora: fila.hora,
+            minuto: fila.minuto,
             potencia,
             potenciaWatts,
             potenciaAjustadaWatts,
             energia: energia_kWh,
-            ahorro,
+            ahorro
           };
         });
 
-        // Guarda los resultados
         setResultados(nuevosResultados);
+        if (onResultados) onResultados(nuevosResultados);
       }
 
     } catch (err) {
@@ -356,7 +364,7 @@ export const HerramientaML = ({ ancho = 500, alto = 300, config = {} }) => {
   return (
 
     <div
-      className="bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      className="bg-white rounded-2xl p-4 shadow-2xl overflow-hidden flex flex-col"
       style={{ width: ancho, height: alto }}
     >
       {/* Título */}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FaChartBar, FaTextHeight, FaArrowLeft, FaPlus, FaExpand } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { FaShapes } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 
 /**
  * ToolBar
@@ -27,7 +28,7 @@ import { FaShapes } from 'react-icons/fa';
  */
 
 
-export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScreen }) => {
+export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScreen, todasLasDiapositivas }) => {
   // Hook de react-router-dom para navegar programáticamente
   const navigate = useNavigate();
 
@@ -88,7 +89,7 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
         <button
           onClick={toggleTipos}
           title="Gráficos"
-          className="text-gray-700 hover:bg-gray-200 p-2 rounded"
+          className="text-gray-700 hover:bg-gray-200 p-2 rounded cursor-pointer"
         >
           {/* Icono de gráfico de barras */}
           <FaChartBar size={18} />
@@ -98,21 +99,21 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
         {mostrarTipos && (
           <div className="absolute left-12 top-0 bg-white rounded-lg shadow-lg p-2 flex flex-col gap-1 w-48 z-50">
             {/* Lista de botones para cada tipo de gráfico */}
-            {[
-              { tipo: 'grafico-bar', emoji: '📊', nombre: 'Barra' },
+            {[/* 
+              { tipo: 'grafico-bar', emoji: '📊', nombre: 'Barra' }, */
               { tipo: 'grafico-line', emoji: '📈', nombre: 'Línea' },
-              { tipo: 'grafico-gauge', emoji: '🎯', nombre: 'Medidor Circular' },
+              /* { tipo: 'grafico-gauge', emoji: '🎯', nombre: 'Medidor Circular' },
               { tipo: 'grafico-area', emoji: '🌄', nombre: 'Área' },
               { tipo: 'grafico-area-stack', emoji: '🌈', nombre: 'Área Apilada' },
               { tipo: 'grafico-linea-multiple', emoji: '📶', nombre: 'Múltiples Líneas' },
               { tipo: 'gauge-stage', emoji: '🧭', nombre: 'Etapas' },
-              { tipo: 'gauge-grade', emoji: '🎓', nombre: 'Calificación' },
+              { tipo: 'gauge-grade', emoji: '🎓', nombre: 'Calificación' }, */
             ].map(({ tipo, emoji, nombre }) => (
               // Botón para agregar un tipo de gráfico y cerrar el menú
               <button
                 key={tipo}
                 onClick={() => agregarYCerrar(tipo)}
-                className="flex items-center gap-2 text-sm hover:bg-gray-100 px-3 py-2 rounded text-left text-gray-800"
+                className="flex items-center gap-2 text-sm hover:bg-gray-100 px-3 py-2 rounded text-left text-gray-800 cursor-pointer"
               >
                 <span className="text-base">{emoji}</span>
                 <span>{nombre}</span>
@@ -133,7 +134,7 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
       </button> */}
 
       {/* Botón para agregar un componente de texto */}
-      <button onClick={() => onAgregar('texto')} title="Texto">
+      <button onClick={() => onAgregar('texto')} className='cursor-pointer' title="Texto">
         {/* Icono de texto */}
         <FaTextHeight />
       </button>
@@ -144,14 +145,14 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
         <button
           onClick={() => setMostrarFormas(!mostrarFormas)}
           title="Formas"
-          className="text-gray-700 hover:bg-gray-200 p-2 rounded"
+          className="text-gray-700 hover:bg-gray-200 p-2 rounded cursor-pointer"
         >
           <FaShapes size={18} />
         </button>
 
         {/* Menú desplegable con las distintas formas disponibles */}
         {mostrarFormas && (
-          <div className="absolute left-12 top-0 bg-white rounded-lg shadow-lg p-2 flex flex-col gap-1 w-48 z-50">
+          <div className="absolute left-12 top-0  bg-white rounded-lg shadow-lg p-2 flex flex-col gap-1 w-48 z-50 ">
             {[
               { tipo: 'forma-rectangulo', emoji: '⬛', nombre: 'Rectángulo' },
               { tipo: 'forma-circulo', emoji: '⚪', nombre: 'Círculo' },
@@ -167,7 +168,7 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
                   onAgregar(tipo);
                   setMostrarFormas(false);
                 }}
-                className="flex items-center gap-2 text-sm hover:bg-gray-100 px-3 py-2 rounded text-left text-gray-800"
+                className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 px-3 py-2 rounded text-left text-gray-800"
               >
                 <span className="text-base">{emoji}</span>
                 <span>{nombre}</span>
@@ -183,7 +184,7 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
         <button
           onClick={() => setMostrarHerramientas(prev => !prev)}
           title="Herramientas"
-          className="text-gray-700 hover:bg-gray-200 p-2 rounded"
+          className="text-gray-700 hover:bg-gray-200 p-2 rounded cursor-pointer"
         >
           🛠️
         </button>
@@ -199,20 +200,33 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
               }}
               className="flex items-center gap-2 text-sm hover:bg-gray-100 px-3 py-2 rounded text-left text-gray-800"
             >
-              <span className="text-base">🔮</span>
-              <span>Predecir</span>
+              <span className="text-base cursor-pointer">🔮</span>
+              <span className='cursor-pointer'>Predecir</span>
             </button>
 
             {/* Herramienta: Tabla ML Tiempo Real */}
             <button
               onClick={() => {
+                const yaHayTabla = todasLasDiapositivas.some(diapositiva =>
+                  diapositiva.componentes.some(c => c.tipo === 'tabla-ml-tiempo-real')
+                );
+
+                if (yaHayTabla) {
+                  Swal.fire({
+                    icon: 'warning',
+                    title: 'Ya existe',
+                    text: 'Solo puedes tener una tabla ML Tiempo Real en cualquier diapositiva.'
+                  });
+                  return;
+                }
+
                 onAgregar('tabla-ml-tiempo-real');
                 setMostrarHerramientas(false);
               }}
               className="flex items-center gap-2 text-sm hover:bg-gray-100 px-3 py-2 rounded text-left text-gray-800"
             >
-              <span className="text-lg">📊</span>
-              <span>Tabla ML Tiempo Real</span>
+              <span className="text-lg cursor-pointer">📊</span>
+              <span className='cursor-pointer'>Tabla ML Tiempo Real</span>
             </button>
           </div>
 
@@ -227,7 +241,7 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
       <button
         onClick={onToggleFullScreen}
         title="Presentar"
-        className="text-blue-600 hover:bg-blue-100 p-2 rounded"
+        className="text-blue-600 hover:bg-blue-100 p-2 rounded cursor-pointer"
       >
         <FaExpand size={16} />
       </button>
@@ -236,7 +250,7 @@ export const ToolBar = ({ onAgregar, zoomPercent, isFullScreen, onToggleFullScre
       <button
         onClick={() => navigate('/dashboard')}
         title="Volver"
-        className="text-gray-400 hover:text-black p-2"
+        className="text-gray-400 hover:text-black p-2 cursor-pointer"
       >
         <FaArrowLeft size={16} />
       </button>

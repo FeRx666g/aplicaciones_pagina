@@ -21,50 +21,43 @@ import React from 'react';
 
 export const APIRestinfo = () => {
   return (
-    // Contenedor principal con máximo ancho, centrado y estilos generales
-    <div className="max-w-5xl mx-auto px-6 py-10 text-white">
+    <div className="max-w-5xl mx-auto px-6 py-10 text-black dark:text-white">
 
       {/* Título principal */}
       <h1 className="text-3xl font-bold text-cyan-400 mb-6">
         📡 Cómo enviar datos al backend vía API REST
       </h1>
 
-      {/* Introducción breve */}
-      <p className="mb-4 text-gray-200">
+      <p className="mb-4 text-gray-700 dark:text-gray-300">
         Este sistema te permite conectar tus dispositivos o scripts externos y enviar mediciones al backend mediante una API RESTful. Aquí te explicamos paso a paso cómo hacerlo correctamente.
       </p>
 
-      {/* Separador */}
-      <hr className="my-6 border-gray-600" />
+      <hr className="my-6 border-gray-300 dark:border-gray-600" />
 
-      {/* Paso 1: Crear dispositivo */}
       <h2 className="text-xl font-semibold text-yellow-400 mb-2">🛠️ Paso 1: Crear un dispositivo</h2>
-      <ul className="list-disc ml-6 text-gray-200 mb-4">
+      <ul className="list-disc ml-6 text-gray-700 dark:text-gray-300 mb-4">
         <li>Dirígete a la sección <strong>“Dispositivos”</strong> en el menú principal.</li>
         <li>Haz clic en <strong>“+ Agregar dispositivo”</strong>.</li>
         <li>Llena los datos del dispositivo, como el nombre, descripción y tipo (sensor o actuador).</li>
         <li>Una vez creado, se mostrará una tarjeta con su <strong>ID único</strong>. Este ID es esencial para identificar al dispositivo al momento de enviar datos.</li>
       </ul>
 
-      {/* Paso 2: Obtener API Key */}
       <h2 className="text-xl font-semibold text-yellow-400 mb-2">🔑 Paso 2: Obtener una API Key</h2>
-      <ul className="list-disc ml-6 text-gray-200 mb-4">
+      <ul className="list-disc ml-6 text-gray-700 dark:text-gray-300 mb-4">
         <li>Ingresa a la sección <strong>“API Keys”</strong>.</li>
         <li>Selecciona la fecha y hora en que deseas que expire la clave.</li>
         <li>Haz clic en <strong>“Generar nueva API Key”</strong>.</li>
         <li>Copia el valor de la clave. Esta será utilizada en el <code>x-api-key</code> del header de tus peticiones.</li>
       </ul>
 
-      {/* Paso 3: Enviar datos */}
       <h2 className="text-xl font-semibold text-yellow-400 mb-2">🌐 Paso 3: Enviar datos al backend</h2>
-      <p className="text-gray-300 mb-4">
+      <p className="text-gray-700 dark:text-gray-300 mb-4">
         Usa el siguiente script como ejemplo para enviar datos en tiempo real desde tu microcontrolador o aplicación en Python. Recuerda personalizarlo con tus propios <strong>IDs de dispositivo</strong> y <strong>API Key</strong>.
       </p>
 
-      {/* Ejemplo de código Python */}
-      <div className="bg-zinc-900 text-sm p-4 rounded-lg overflow-x-auto mb-6 border border-zinc-700">
-        <pre className="text-gray-100 whitespace-pre-wrap">
-          {`import requests
+      <div className="bg-zinc-100 dark:bg-zinc-900 text-sm p-4 rounded-lg overflow-x-auto mb-6 border border-zinc-300 dark:border-zinc-700">
+        <pre className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+{`import requests
 import random
 import time
 
@@ -123,17 +116,15 @@ except KeyboardInterrupt:
         </pre>
       </div>
 
-      {/* Detalles importantes */}
       <h2 className="text-xl font-semibold text-yellow-400 mb-2">📎 Detalles importantes</h2>
-      <ul className="list-disc ml-6 text-gray-200 mb-6">
+      <ul className="list-disc ml-6 text-gray-700 dark:text-gray-300 mb-6">
         <li>🔐 Las API Keys tienen fecha de expiración. Una vez vencida, debes generar una nueva.</li>
         <li>🛑 Si la API Key es inválida o caducó, el servidor devolverá <code>401 Unauthorized</code>.</li>
         <li>✅ Los datos enviados se reflejan en el sistema en tiempo real si el ID del dispositivo es válido y corresponde al usuario autenticado.</li>
         <li>📄 El backend espera un <strong>array de objetos</strong> con campos: <code>id_dispositivo</code> y <code>datos</code>.</li>
       </ul>
 
-      {/* Mensaje final */}
-      <p className="text-center text-green-400 font-semibold">
+      <p className="text-center text-green-600 dark:text-green-400 font-semibold">
         ¡Tu dispositivo ya está listo para enviar datos al sistema Deep SunLy!
       </p>
     </div>

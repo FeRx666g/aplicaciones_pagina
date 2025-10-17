@@ -9,7 +9,7 @@ import { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, query, where, 
 import { UserContext } from '../providers/UserProvider';
 import { ModalEditarComponente } from '../componentes/ModalEditarComponente';
 import { HerramientaML } from '../componentes/HerramientaML';
-import { FaCog } from 'react-icons/fa';
+import { FaCog, FaPlay, FaPause } from "react-icons/fa";
 import Swal from 'sweetalert2';
 
 /**
@@ -772,10 +772,11 @@ export const VistaTablero = () => {
       {/* Si no está en pantalla completa, se muestra la barra de herramientas superior */}
       {!isFullScreen && (
         <ToolBar
-          onAgregar={agregarComponente}           // Callback para agregar un nuevo componente
-          zoomPercent={zoomPercent}              // Nivel de zoom actual
-          isFullScreen={isFullScreen}           // Estado actual de pantalla completa
-          onToggleFullScreen={toggleFullScreen} // Función para cambiar a pantalla completa
+          onAgregar={agregarComponente}
+          zoomPercent={zoomPercent}
+          isFullScreen={isFullScreen}
+          onToggleFullScreen={toggleFullScreen}
+          todasLasDiapositivas={diapositivas}
         />
       )}
 

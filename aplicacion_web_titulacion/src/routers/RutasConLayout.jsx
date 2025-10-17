@@ -1,20 +1,4 @@
 // RutasConLayout.jsx
-import { Routes, Route, useLocation } from 'react-router-dom';
-import { Inicio } from '../paginas/Inicio';
-import { Dashboard } from '../paginas/Dashboard';
-import { APIRestinfo } from '../paginas/APIRestinfo';
-import { Camara } from '../paginas/Camara';
-import { Admin } from '../paginas/Admin';
-import { Header } from '../componentes/Header';
-import { ModoOscuro } from '../componentes/ModoOscuro';
-import { Footer } from '../componentes/Footer';
-import { APIKeysPage } from '../paginas/APIKeysPage';
-import { useEffect, useContext } from 'react';
-import { UserContext } from '../providers/UserProvider';
-import { Dispositivos } from '../paginas/Dispositivos';
-import { VistaTablero } from '../paginas/VistaTablero';
-import { verificarRolBackend } from '../utils/verificarRolBackend';
-import { auth } from '../firebase';
 
 /**
  * RutasConLayout.jsx
@@ -42,6 +26,25 @@ import { auth } from '../firebase';
  * También se asegura de ocultar o mostrar partes del layout según la página.
  * Usa el contexto `UserContext` para obtener y actualizar información del usuario autenticado.
  */
+
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { Inicio } from '../paginas/Inicio';
+import { PrediccionEstatica } from '../paginas/PrediccionEstatica';
+import { Dashboard } from '../paginas/Dashboard';
+import { APIRestinfo } from '../paginas/APIRestinfo';
+import { Camara } from '../paginas/Camara';
+import { Admin } from '../paginas/Admin';
+import { Header } from '../componentes/Header';
+import { ModoOscuro } from '../componentes/ModoOscuro';
+import { Footer } from '../componentes/Footer';
+import { APIKeysPage } from '../paginas/APIKeysPage';
+import { useEffect, useContext } from 'react';
+import { UserContext } from '../providers/UserProvider';
+import { Dispositivos } from '../paginas/Dispositivos';
+import { VistaTablero } from '../paginas/VistaTablero';
+import { verificarRolBackend } from '../utils/verificarRolBackend';
+import { auth } from '../firebase';
+import { PrediccionTiempoReal } from '../paginas/PrediccionTiempoReal';
 
 export const RutasConLayout = () => {
   const { user, setUser } = useContext(UserContext); // Obtiene el usuario y la función para actualizarlo desde el contexto
@@ -113,6 +116,8 @@ export const RutasConLayout = () => {
             <Route path="/" element={<Inicio />} /> {/* Ruta inicio */}
             <Route path="/inicio" element={<Inicio />} /> {/* Ruta alternativa de inicio */}
             <Route path="/dashboard" element={<Dashboard />} /> {/* Dashboard */}
+            <Route path="/prediccionestatica" element={<PrediccionEstatica />} />
+            <Route path="/predicciontiemporeal" element={<PrediccionTiempoReal />} /> 
             <Route path="/apirestinfo" element={<APIRestinfo />} /> {/* Info API */}
             <Route path="/camara" element={<Camara />} /> {/* Cámara */}
             <Route path="/mis-apikeys" element={<APIKeysPage />} /> {/* API Keys */}

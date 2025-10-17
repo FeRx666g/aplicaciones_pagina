@@ -262,10 +262,47 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
 
     // Caso específico: guardar configuración para componente de tipo 'tabla-ml-tiempo-real'
     if (componente?.tipo === 'tabla-ml-tiempo-real') {
+      const columnas = configLocal.columnas ?? [];
+
+      const incompletas = columnas.filter(
+        col => !col.id_dispositivo || !col.campo
+      );
+
+      if (incompletas.length > 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campos incompletos',
+          text: 'Por favor completa todos los campos antes de guardar.',
+        });
+        return;
+      }
+
+      // aquí validamos la lógica de las variables ML
+      const clavesSeleccionadas = columnas
+        .map(c => c.clave_modelo)
+        .filter(Boolean);
+
+      const sinDuplicados = [...new Set(clavesSeleccionadas)];
+
+      const todasLasClavesModelo = ['temperatura', 'humedad', 'irradiancia', 'lux', 'nubosidad'];
+
+      const todasAsignadas = todasLasClavesModelo.every(clave =>
+        sinDuplicados.includes(clave)
+      );
+
+      if (clavesSeleccionadas.length > 0 && !todasAsignadas) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Variables ML incompletas',
+          text: 'Debes asociar todas las variables del modelo o dejar todas sin asociar antes de guardar.',
+        });
+        return;
+      }
+
       onGuardar({
         ...componente.config,
         titulo,
-        columnas: configLocal.columnas || [],
+        columnas,
         modoTiempoReal: true,
         sinSombra: configLocal.sinSombra ?? false,
         costoKWh,
@@ -335,7 +372,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-lg p-6 w-[600px] max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Editar componente</h2>
 
         {/* Etiqueta para el campo de título */}
@@ -363,7 +400,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
 
             {/* Itera sobre las columnas configuradas para editarlas */}
             {(configLocal.columnas || []).map((col, index) => (
-              <div key={index} className="grid grid-cols-6 gap-2 mb-2 items-center">
+              <div key={index} className="flex justify-center items-center gap-2">
 
                 {/* Input para el nombre de la columna */}
                 <input
@@ -418,8 +455,8 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                 {/* Input para la unidad de medida (opcional) */}
                 <input
                   type="text"
-                  placeholder="Unidad (opcional)"
-                  className="input-form"
+                  placeholder="Unidad"
+                  className="input-form text-center"
                   value={col.unidad}
                   onChange={(e) => {
                     const nuevas = [...configLocal.columnas];
@@ -456,7 +493,7 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
                     nuevas.splice(index, 1);
                     setConfigLocal({ ...configLocal, columnas: nuevas });
                   }}
-                  className="text-red-500 text-lg hover:scale-110"
+                  className="text-red-500 text-lg hover:scale-110  cursor-pointer "
                   title="Eliminar columna"
                 >
                   ❌
@@ -992,13 +1029,13 @@ export const ModalEditarComponente = ({ componente, onClose, onGuardar }) => {
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={guardarCambios}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
           >
             Guardar
           </button>

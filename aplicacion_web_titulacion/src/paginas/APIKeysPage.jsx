@@ -6,6 +6,7 @@ import { nanoid } from 'nanoid';
 import { AccesoRestringido } from '../componentes/AccesoRestringido';
 import SHA256 from 'crypto-js/sha256';
 import Swal from 'sweetalert2';
+import { orderBy } from 'firebase/firestore';
 
 /**
  * APIKeysPage
@@ -62,7 +63,11 @@ export const APIKeysPage = () => {
         if (!user) return; // si no hay usuario, no hace nada
 
         // Crea la consulta para las keys del usuario actual
-        const q = query(collection(db, 'api_keys'), where('uid', '==', user.uid));
+        const q = query(
+            collection(db, 'api_keys'),
+            where('uid', '==', user.uid),
+            orderBy('createdAt', 'desc')
+        );
 
         // Ejecuta la consulta
         const snapshot = await getDocs(q);

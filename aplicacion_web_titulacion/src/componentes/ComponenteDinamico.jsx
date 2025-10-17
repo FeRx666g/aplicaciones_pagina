@@ -206,7 +206,7 @@ export const ComponenteDinamico = ({ componente }) => {
     // Gráfico de barras (ECharts)
     case 'grafico-bar':
       return (
-        <ReactECharts
+        <ReactECharts key="grafico-bar"
           {...chartProps}
           option={{
             ...opcionesBase,
@@ -222,7 +222,7 @@ export const ComponenteDinamico = ({ componente }) => {
     // Gráfico de líneas (ECharts)
     case 'grafico-line':
       return (
-        <ReactECharts
+        <ReactECharts key="grafico-line"
           {...chartProps}
           option={{
             ...opcionesBase,
@@ -334,15 +334,11 @@ export const ComponenteDinamico = ({ componente }) => {
                 }
               },
               axisLabel: {
+                show: true,
                 distance: 15,
-                formatter: (value) => {
-                  if (value === 20) return 'D';
-                  if (value === 40) return 'C';
-                  if (value === 60) return 'B';
-                  if (value === 80) return 'A';
-                  return '';
-                }
-              },
+                formatter: '{value}'
+              }
+              ,
               pointer: {
                 icon: 'triangle',
                 length: '60%',
@@ -546,11 +542,11 @@ export const ComponenteDinamico = ({ componente }) => {
 
     // Herramienta de Machine Learning
     case 'herramienta-ml':
-      return <HerramientaML />;
+      return <HerramientaML key="herramienta-ml" />;
 
     // Tabla con datos en tiempo real
     case 'tabla-ml-tiempo-real':
-      return <TablaTiempoReal config={config} datosTiempoReal={datosTiempoReal} />;
+      return <TablaTiempoReal key="tabla-ml-tiempo-real" config={config} datosTiempoReal={datosTiempoReal} />;
 
     // Caso por defecto: no soportado
     default:
